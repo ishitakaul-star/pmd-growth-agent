@@ -100,6 +100,7 @@ const TEAM = [
     promoTarget: 'Senior Staff PM (T5)', readiness: 58,
     strengths: ['Deep domain expertise in Learning', 'Strong vendor relationships (Docebo, Degreed)'],
     growthAreas: ['Cross-team influence beyond Learning domain', 'AI-first product thinking'],
+    recentFeedback: 'CAMP Phase 2 prioritization before compliance deadline was critical — 350+ enrollment gaps detected. Cross-team alignment with CyberCRAFT and Legal was seamless.',
   },
   {
     name: 'Kevin', role: 'Staff PM', level: 'T4',
@@ -113,6 +114,7 @@ const TEAM = [
     promoTarget: 'Senior Staff PM (T5)', readiness: 50,
     strengths: ['Product execution on Academy initiatives', 'Stakeholder alignment'],
     growthAreas: ['Strategic framing at BU level', 'Technology fluency with AI tooling'],
+    recentFeedback: 'Academy curriculum refresh is solid but needs stronger connection to business outcomes. Consider framing impact in terms of advisor retention and NPS.',
   },
   {
     name: 'Tammy Mao-McDonald', role: 'Principal PM', level: 'T5',
@@ -128,6 +130,7 @@ const TEAM = [
     promoTarget: 'Director, Product (M4)', readiness: 45,
     strengths: ['Execution across complex multi-vendor programs', 'Strong stakeholder management at VP level'],
     growthAreas: ['Strategic vision articulation', 'Building and growing a PM team'],
+    recentFeedback: 'QBL AIO coordination was solid — alignment across PART, Radancy, Eloqua. Local Experts resourcing is stretched thin with parallel workstreams.',
   },
   {
     name: 'Sylesh', role: 'Staff PM', level: 'T4',
@@ -141,6 +144,7 @@ const TEAM = [
     promoTarget: 'Senior Staff PM (T5)', readiness: 48,
     strengths: ['Platform implementation expertise', 'Process-oriented thinking'],
     growthAreas: ['Product strategy beyond implementation', 'Cross-functional influence'],
+    recentFeedback: 'SNOW implementation is tracking well on Phase 1. Needs to show more strategic product thinking — not just execution but vision for how HRSD transforms HR ops.',
   },
   {
     name: 'Pavel', role: 'Staff PM', level: 'T4',
@@ -154,103 +158,381 @@ const TEAM = [
     promoTarget: 'Senior Staff PM (T5)', readiness: 52,
     strengths: ['Deep Workday platform expertise', 'Reliable execution on upgrades'],
     growthAreas: ['Strategic product thinking beyond platform maintenance', 'AI-first mindset'],
+    recentFeedback: 'Promotions WD Extend GenAI review was navigated well. R1 timeline decisions need earlier communication to PD to prevent build compression (CRAID435).',
   },
 ];
 
 const RISKS = [
   'CRAID435: R1 timeline pressure on Promotions WD Extend (Pavel) — late designs compressing build window for March 4',
   'CRAID179: Parallel path resourcing — bandwidth constraint across Local Experts, Expert Job Architecture, Twilio Phase 2 (Tammy)',
-  'Local Experts (Tammy/Addison) extremely compressed timeline with construction schedule shifts',
+  'Local Experts (Tammy) extremely compressed timeline with construction schedule shifts',
   'Avature vendor dependencies on data migration deliverables (Tammy)',
   'ServiceNow HRSD implementation complexity — first major SNOW rollout for HR (Sylesh)',
 ];
 
-/* ── Build system prompts per mode ── */
-function buildSystemPrompt(mode) {
-  const base = `You are the PM&D Growth Agent — a powerful AI agent for Product Managers at Intuit. You help with goals, feedback (SBI framework), 1:1 prep, craft skills assessment, promotion readiness, and development planning.
+/* ══════════════════════════════════════════════
+   INTELLIGENT RESPONSE ENGINE (No API needed)
+   ══════════════════════════════════════════════ */
 
-PM Craft Skills Rubric FY26 — 4 Pillars:
-- Product Strategy: customer understanding, strategy definition, cross-team influence, roadmap optimization
-- Product Execution: E2E experience, product excellence, cross-functional facilitation, data-driven problem solving
-- Technology Fluency: AI-first mindset, self-serve tooling, capability strategies, training others on AI
-- Org Effectiveness: data-driven decisions, cross-functional partnerships, storytelling, AI-accelerated execution
+function generateResponse(query, mode) {
+  const q = query.toLowerCase();
 
-Use markdown formatting: **bold**, bullets, headers (##, ###). Be structured and scannable. Reference specific data. Be direct and actionable.`;
-
+  // ── EMPLOYEE MODE RESPONSES ──
   if (mode === 'employee') {
-    return base + `
 
-MODE: EMPLOYEE — You are coaching ${ME.name} on her personal growth.
+    if (q.includes('promot') || q.includes('director') || q.includes('readiness') || q.includes('case')) {
+      return `## Promotion Readiness: Director, Product Management
 
-PROFILE:
-${ME.name}, ${ME.role} at Intuit — ${ME.team}
-Promotion Target: ${ME.target}
-Promotion Readiness: ${ME.promoReadiness}%
+**Overall: ${ME.promoReadiness}%** — You have a strong foundation. Here's the breakdown:
 
-RECENT WINS:
-${ME.recentWins.map(w => `- ${w}`).join('\n')}
+### Strengths (keep building evidence)
+- **Product Execution — 90%**: 5+ major launches across the portfolio (CAMP, Internal Apply Phase 1, Docebo Migration, QBL AIO, Conversation Simulator). This is Director-caliber delivery.
+- **Product Strategy — 85%**: Enterprise Vision Strategy delivered for ALL of HR Product Tech. VP-aligned. This is your crown jewel for the Director case.
 
-PERSONAL GOALS:
-${ME.personalGoals.map(g => `- [${g.status.toUpperCase()}] ${g.title} — ${g.progress}% — ${g.pillar} — Due: ${g.due}`).join('\n')}
+### Gaps to Close
+- **Org Effectiveness — 68%**: You manage ${TEAM.length} PMs and a massive portfolio, but the Director bar requires **cross-BU organizational influence**. You need visible examples of influencing roadmaps, decisions, or strategy outside T4i.
+- **Technology Fluency — 62%**: You've driven AI initiatives (CAMP, Conversation Simulator, AI Course Recommender) but need **enterprise-level AI advocacy**. Present at company-wide forums, publish AI POVs, evangelize.
 
-CRAFT SKILLS (Self / Director Target):
-${Object.entries(ME.skills).map(([k,v]) => `- ${k}: ${v.self} / ${v.target}`).join('\n')}
+### Top 3 Actions to Close Gaps
+1. **Present the Enterprise Vision Strategy at People Tech All-Hands** — this gives you cross-BU visibility and demonstrates strategic leadership at the Director level
+2. **Lead an AI-first transformation showcase** — pull together CAMP, Conversation Simulator, and AI Course Recommender into a compelling narrative about AI in HR Tech
+3. **Sponsor a cross-BU initiative** — find an adjacent team (e.g., IT, Finance Tech) and co-lead a joint AI or platform initiative to show Org Effectiveness at scale
 
-PROMO STRENGTHS: ${ME.promoStrengths.join('; ')}
-PROMO GAPS: ${ME.promoGaps.join('; ')}
+### Key Evidence for Your Packet
+${ME.recentWins.map(w => `- ${w}`).join('\n')}`;
+    }
 
-FEEDBACK RECEIVED:
-${ME.feedbackReceived.map(f => `- ${f.from} (${f.role}, ${f.date}): "${f.summary}" [${f.sentiment}]`).join('\n')}
+    if (q.includes('goal') || q.includes('focus') || q.includes('attention') || q.includes('week') || q.includes('priorities')) {
+      const active = ME.personalGoals.filter(g => g.status !== 'completed');
+      const completed = ME.personalGoals.filter(g => g.status === 'completed');
+      return `## Your Personal Goals — Director Track
 
-TEAM SHE MANAGES (for context — but focus on HER growth):
-${TEAM.map(t => `- ${t.name} (${t.role}) — ${t.area}`).join('\n')}
+### Completed
+${completed.map(g => `- ✅ **${g.title}** — ${g.pillar}`).join('\n')}
 
-KEY RISKS ACROSS PORTFOLIO:
-${RISKS.join('\n')}
+### Active Goals
+${active.map(g => `- ${g.status === 'at_risk' ? '⚠️' : '🔵'} **${g.title}** — ${g.progress}% — ${g.pillar} — Due: ${g.due}`).join('\n')}
 
-Focus on Ishita's personal development toward Director. Her enterprise vision strategy delivery and expanded scope are key evidence. Help her build the Director case.`;
+### This Week's Focus
+1. **Promotions WD Extend R1 (Mar 4)** — Pavel's go-live is at risk (CRAID435). Ensure you're unblocking the timeline and have a mitigation plan ready. This is a portfolio delivery that reflects on your execution credibility.
+2. **AI-first transformation narrative** — Start assembling the story: CAMP + Conversation Simulator + AI Course Recommender = AI is transforming HR Tech under your leadership. This is Technology Fluency evidence.
+3. **Cross-BU influence play** — Identify one meeting or forum this week where you can share the Enterprise Vision Strategy outside T4i. Even a 10-min slot builds Org Effectiveness evidence.
+
+### Biggest Risk to Your Director Case
+Your portfolio risks (CRAID435, CRAID179, Local Experts timeline) could undermine the "reliable delivery" narrative if anything slips publicly. Stay close to Tammy and Pavel this week.`;
+    }
+
+    if (q.includes('craft') || q.includes('skill') || q.includes('rubric') || q.includes('gap')) {
+      return `## Craft Skills Assessment — Director Level
+
+### Your Scores vs. Director Target
+
+| Pillar | You | Target | Gap | Status |
+|--------|-----|--------|-----|--------|
+| **Product Strategy** | 4.3 | 4.8 | -0.5 | Strong — Enterprise Vision delivered |
+| **Product Execution** | 4.5 | 4.8 | -0.3 | Strongest pillar — 5+ launches |
+| **Technology Fluency** | 3.8 | 4.5 | -0.7 | Biggest gap — need AI evangelism |
+| **Org Effectiveness** | 4.0 | 4.7 | -0.7 | Need cross-BU influence at scale |
+
+### Biggest Gap: Technology Fluency (-0.7)
+At the Director level, you need to **translate business requirements into AI-first technical decisions** and **coach AI experimentation across the org**. Your AI initiatives (CAMP, Conversation Simulator, AI Recommender) are good — but they're execution, not evangelism.
+
+**Actions:**
+- Publish an internal AI POV document for People Tech
+- Present AI transformation results at a company-wide PM forum
+- Coach your PMs (especially Kevin, Sylesh, Pavel) on AI-first thinking
+
+### Second Gap: Org Effectiveness (-0.7)
+Director-level = **driving complex strategic decisions across multiple teams** and being a **skilled storyteller and negotiator** at the VP/SVP level. You're strong within T4i — need to extend reach.
+
+**Actions:**
+- Co-lead a cross-BU initiative with IT or Finance Tech
+- Present the Enterprise Vision Strategy to VP-level audience outside T4i
+- Build a narrative connecting T4i work to company-wide People strategy`;
+    }
+
+    if (q.includes('develop') || q.includes('plan') || q.includes('90') || q.includes('learn') || q.includes('grow')) {
+      return `## 90-Day Development Plan — Director Readiness
+
+### Month 1: Foundation (Weeks 1-4)
+- **[Technology Fluency]** Assemble AI transformation narrative: CAMP + Conversation Simulator + AI Course Recommender. Document measurable impact (350+ gaps detected, 30 pilot users, etc.)
+- **[Org Effectiveness]** Identify and schedule a cross-BU presentation of the Enterprise Vision Strategy. Target: People Tech All-Hands or Product Leadership forum
+- **[Product Strategy]** Draft a "Year 2" addendum to the Enterprise Vision Strategy with specific FY27 investment recommendations
+
+### Month 2: Visibility (Weeks 5-8)
+- **[Technology Fluency]** Publish internal AI POV for HR Tech. Share with PM community. Run an "AI in HR" brown bag session
+- **[Org Effectiveness]** Launch a cross-BU working group on a shared challenge (e.g., AI governance in HR data, or shared platform strategy between Workday/SNOW)
+- **[Product Execution]** Ensure Promotions WD Extend R1 ships clean. This is a visibility moment
+
+### Month 3: Narrative (Weeks 9-12)
+- **[All Pillars]** Build your Director promotion packet: assemble evidence across all 4 pillars
+- **[Org Effectiveness]** Get 3+ peer endorsements from outside T4i (VP-level or cross-BU PMs)
+- **[Product Strategy]** Present FY27 investment thesis to senior leadership
+
+### Key Metrics to Track
+- Cross-BU presentations delivered: Target 2+
+- AI initiatives with documented impact: Target 3+
+- VP-level peer feedback collected: Target 3+
+- Portfolio delivery on time: maintain 80%+ rate
+
+### Projected Readiness After 90 Days: ~85% (from ${ME.promoReadiness}% today)`;
+    }
+
+    if (q.includes('vision') || q.includes('strategy') || q.includes('enterprise') || q.includes('leverage')) {
+      return `## Leveraging the Enterprise Vision Strategy
+
+The Enterprise Vision Strategy is your **strongest Director-level evidence**. Here's how to maximize it:
+
+### What It Demonstrates
+- **Product Strategy (T6-level behavior)**: "Sets business outcome objectives tied to product roadmap" and "Demonstrates deep understanding of BU offerings to influence adjacent roadmaps"
+- **Org Effectiveness**: Strategic decision-making at the portfolio level, cross-team alignment
+- **Leadership scope**: You defined the tech strategy for ALL of HR Product Tech — that's Director-level scope
+
+### How to Amplify It
+1. **Present it externally (to your org)** — Don't let it sit in a doc. Present to:
+   - People Tech leadership (VP/SVP level)
+   - Adjacent tech leaders (IT, Finance Tech, CTO org)
+   - PM All-Hands or Product Leadership Council
+2. **Connect it to outcomes** — Track which initiatives from the vision are already delivering (CAMP, AI Course Recommender, SNOW HRSD). Show "strategy → execution → measurable impact"
+3. **Create a "Year 1 Progress" update** — Show the vision is alive: what shipped, what's in progress, what shifted. This demonstrates strategic ownership over time, not just a one-time doc
+4. **Use it as your promo narrative anchor** — The Director case should lead with: "Ishita defined and is now executing the enterprise vision for HR Product Tech at Intuit"
+
+### Risk
+If the strategy stays internal to T4i, it's a strong Staff+ artifact but not Director-level evidence. The amplification to cross-BU audiences is what makes it Director-caliber.`;
+    }
+
+    if (q.includes('feedback') || q.includes('theme')) {
+      return `## Feedback Analysis
+
+### Feedback Received
+${ME.feedbackReceived.map(f => `**${f.from}** (${f.role}, ${f.date}) — *${f.sentiment}*\n> "${f.summary}"`).join('\n\n')}
+
+### Themes Identified
+- **Portfolio Management** (strength, 3+ mentions): Consistently recognized for managing breadth across ${TEAM.length} PMs and 15+ workstreams
+- **Major Delivery** (strength): CAMP and EH iCIMS called out as standout deliveries
+- **Communication Timing** (growth area): R1 timeline decisions on Promotions WD Extend could have been communicated earlier to PD
+
+### Actions for Director Case
+1. **Collect more feedback** — You need 3+ VP-level endorsements. Ask Rajesh to provide a written endorsement, and seek feedback from cross-BU partners
+2. **Address the timing gap** — Set up a "decisions log" practice where timeline-impacting decisions are communicated same-day to affected teams
+3. **Ask for cross-BU feedback** — Present the Enterprise Vision Strategy and explicitly request feedback from outside T4i. This builds both evidence and influence`;
+    }
+
+    // Default employee response
+    return `## How I Can Help
+
+I have full context on your profile, goals, craft skills, and promotion trajectory. Here are things I can help with:
+
+**Your Profile:** ${ME.name}, ${ME.role} — ${ME.team}
+**Target:** ${ME.target} (currently ${ME.promoReadiness}% ready)
+
+### Try asking me:
+- "Assess my promotion readiness for Director"
+- "Review my personal goals"
+- "Analyze my craft skills gaps"
+- "Create a 90-day development plan"
+- "How can I leverage the Enterprise Vision Strategy?"
+- "What should I focus on this week?"
+- "Analyze my feedback themes"
+
+I'll give you specific, actionable guidance based on your actual data.`;
   }
 
-  // Manager mode
-  return base + `
+  // ── MANAGER MODE RESPONSES ──
 
-MODE: MANAGER — You are helping ${ME.name} manage and develop her team.
+  if (q.includes('team') && (q.includes('overview') || q.includes('status') || q.includes('all'))) {
+    return `## Team Overview — ${TEAM.length} Direct Reports
 
-${ME.name}, ${ME.role} — ${ME.team}
-
-DIRECT REPORTS:
 ${TEAM.map(t => {
-  let block = `\n### ${t.name} — ${t.role} (${t.level}) — ${t.area}`;
-  block += `\nFocus: ${t.focus.join(', ')}`;
+  const atRisk = t.goals.filter(g => g.status === 'at_risk').length;
+  const completed = t.goals.filter(g => g.status === 'completed').length;
+  const statusIcon = atRisk > 0 ? '⚠️' : completed === t.goals.length ? '✅' : '🔵';
+  let block = `### ${statusIcon} ${t.name} — ${t.role} (${t.level})\n**${t.area}**`;
   if (t.subReports) block += `\nSub-reports: ${t.subReports.join(', ')}`;
-  block += `\nPromo Target: ${t.promoTarget} — Readiness: ${t.readiness}%`;
-  block += `\nStrengths: ${t.strengths.join('; ')}`;
-  block += `\nGrowth Areas: ${t.growthAreas.join('; ')}`;
-  block += `\nGoals:`;
-  t.goals.forEach(g => { block += `\n  - [${g.status.toUpperCase()}] ${g.title} — ${g.progress}%`; });
+  block += `\nPromo: ${t.promoTarget} — **${t.readiness}% ready**`;
+  block += `\nGoals: ${t.goals.map(g => `${g.status === 'completed' ? '✅' : g.status === 'at_risk' ? '⚠️' : '→'} ${g.title} (${g.progress}%)`).join(' | ')}`;
+  if (atRisk > 0) block += `\n**⚠️ ${atRisk} goal(s) at risk**`;
   return block;
-}).join('\n')}
+}).join('\n\n')}
 
-KEY RISKS:
-${RISKS.map(r => `- ${r}`).join('\n')}
+### Needs Your Attention
+${TEAM.filter(t => t.goals.some(g => g.status === 'at_risk')).map(t => `- **${t.name}**: ${t.goals.filter(g => g.status === 'at_risk').map(g => g.title).join(', ')}`).join('\n')}
 
-Help Ishita coach her team, draft feedback, prep 1:1s, assess team members' readiness, and identify development opportunities. Reference specific team member data.`;
-}
+### Portfolio Risks
+${RISKS.slice(0, 3).map(r => `- ${r}`).join('\n')}`;
+  }
 
-/* ── CLAUDE API ── */
-const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
+  // Feedback for specific team member
+  const feedbackFor = TEAM.find(t => q.includes(t.name.toLowerCase().split(' ')[0].toLowerCase()));
+  if (feedbackFor && (q.includes('feedback') || q.includes('draft') || q.includes('write') || q.includes('sbi'))) {
+    const t = feedbackFor;
+    const topGoal = t.goals.find(g => g.status === 'completed') || t.goals[0];
+    const growthGoal = t.goals.find(g => g.status === 'at_risk') || t.goals[t.goals.length - 1];
+    return `## SBI Feedback Draft — ${t.name}
 
-async function callClaude(messages, mode) {
-  const apiKey = localStorage.getItem('anthropic_api_key');
-  if (!apiKey) throw new Error('NO_KEY');
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 2048, system: buildSystemPrompt(mode), messages }),
-  });
-  if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error?.message || `API error ${res.status}`); }
-  const data = await res.json();
-  return data.content[0].text;
+### Positive Feedback
+**Situation:** During FY26 H1, ${t.name} was responsible for ${t.area}, managing ${t.focus.slice(0, 3).join(', ')}.
+
+**Behavior:** ${t.name} ${topGoal.status === 'completed' ? `successfully delivered ${topGoal.title}` : `drove ${topGoal.title} to ${topGoal.progress}% completion`}. ${t.recentFeedback ? t.recentFeedback.split('.')[0] + '.' : `Demonstrated consistent execution across the workstream.`}
+
+**Impact:** This directly contributed to the T4i portfolio delivery goals and demonstrated **${t.strengths[0]}**.
+
+**Craft Skill Alignment:** Product Execution — "Demonstrates high bar for product excellence"
+
+---
+
+### Constructive Feedback
+**Situation:** As ${t.name} works toward ${t.promoTarget} (currently ${t.readiness}% ready), there are specific growth areas to address.
+
+**Behavior:** ${t.growthAreas[0]}. ${growthGoal.status === 'at_risk' ? `The ${growthGoal.title} initiative (${growthGoal.progress}%) shows some of this gap.` : `This is an area where more intentional effort would accelerate growth.`}
+
+**Impact:** Closing this gap would move ${t.name.split(' ')[0]} significantly closer to ${t.promoTarget} and strengthen the overall T4i team capability.
+
+**Suggested Development:**
+- ${t.growthAreas.map(g => `Focus on: ${g}`).join('\n- ')}
+- Consider a stretch assignment that builds cross-team influence
+
+**Craft Skill Alignment:** Org Effectiveness — "Partners across cross-functional teams proactively"`;
+  }
+
+  // 1:1 prep
+  if (q.includes('1:1') || q.includes('prep') || q.includes('agenda')) {
+    const mentioned = TEAM.filter(t => q.includes(t.name.toLowerCase().split(' ')[0].toLowerCase()));
+    const targets = mentioned.length > 0 ? mentioned : TEAM.filter(t => t.goals.some(g => g.status === 'at_risk'));
+    return `## 1:1 Agendas — This Week
+
+${targets.map(t => {
+  const atRisk = t.goals.filter(g => g.status === 'at_risk');
+  const onTrack = t.goals.filter(g => g.status === 'on_track');
+  let block = `### ${t.name} — ${t.role}\n**${t.area}**\n`;
+  block += `\n**Priority Topics:**\n`;
+  if (atRisk.length > 0) block += atRisk.map(g => `- 🔴 **[HIGH]** ${g.title} — ${g.progress}% — What's blocking? What support needed?`).join('\n') + '\n';
+  if (onTrack.length > 0) block += `- 🟢 **[MED]** Progress check: ${onTrack.map(g => `${g.title} (${g.progress}%)`).join(', ')}\n`;
+  block += `- 🔵 **[LOW]** Promo readiness: ${t.promoTarget} — currently ${t.readiness}%. Discuss growth areas: ${t.growthAreas.join(', ')}\n`;
+  block += `\n**Coaching Prompts:**\n`;
+  block += `- "What's the biggest thing slowing you down right now?"\n`;
+  block += `- "How are you thinking about ${t.growthAreas[0]}?"\n`;
+  block += `- "What would it take to get to ${parseInt(t.readiness) + 15}% readiness for ${t.promoTarget}?"`;
+  return block;
+}).join('\n\n---\n\n')}`;
+  }
+
+  // Promo readiness for team
+  if (q.includes('readiness') || q.includes('promot') || q.includes('closest') || q.includes('promo')) {
+    const sorted = [...TEAM].sort((a, b) => b.readiness - a.readiness);
+    return `## Team Promotion Readiness
+
+${sorted.map((t, i) => {
+  const bar = '█'.repeat(Math.round(t.readiness / 5)) + '░'.repeat(20 - Math.round(t.readiness / 5));
+  return `### ${i + 1}. ${t.name} — ${t.role} (${t.level}) → ${t.promoTarget}
+**${t.readiness}%** ${bar}
+**Strengths:** ${t.strengths.join(', ')}
+**Gaps:** ${t.growthAreas.join(', ')}`;
+}).join('\n\n')}
+
+### Coaching Priority
+1. **${sorted[0].name}** (${sorted[0].readiness}%) is closest — invest here for near-term promo
+2. **${sorted[1].name}** (${sorted[1].readiness}%) has strong potential — needs focused development on ${sorted[1].growthAreas[0]}
+3. **Tammy** is unique — targeting Director, needs different coaching (vision, team building)
+
+### Recommended Actions
+- Schedule promo readiness reviews with each report
+- Identify stretch assignments that map to their specific gaps
+- Collect peer feedback for your top 2 candidates`;
+  }
+
+  // Risk review
+  if (q.includes('risk') || q.includes('craid') || q.includes('blocker') || q.includes('attention') || q.includes('needs')) {
+    return `## Portfolio Risk Review
+
+### 🔴 Critical — Act This Week
+${RISKS.slice(0, 2).map(r => `- **${r}**`).join('\n')}
+
+### 🟡 Watch Closely
+${RISKS.slice(2).map(r => `- **${r}**`).join('\n')}
+
+### Who Needs Your Attention Most
+1. **Pavel** — Promotions R1 go-live March 4 is at risk. Late designs = compressed build = compressed testing. You need to make a call: push the date, cut scope, or add resources.
+2. **Tammy** — Running 4 major workstreams with 2 at risk (Avature migration, Local Experts). Bandwidth is the constraint. Consider: can anything be deprioritized?
+3. **Sylesh** — SNOW HRSD is tracking green but it's a first-of-kind implementation. High hidden risk.
+
+### Mitigations
+- **CRAID435 (Pavel)**: Drive cross-functional alignment TODAY to protect E2E testing start. Consider a war room cadence for the next 2 weeks.
+- **CRAID179 (Tammy)**: Triage parallel workstreams — explicitly deprioritize Expert Job Architecture and Twilio Phase 2 to protect Local Experts and AIO.
+- **SNOW (Sylesh)**: Ensure Phase 1 scope is locked. No scope creep. Weekly risk review with PD.`;
+  }
+
+  // Development plans for team
+  if (q.includes('develop') || q.includes('coaching') || q.includes('invest')) {
+    return `## Team Development & Coaching Priorities
+
+### Where to Invest Your Time
+
+**Tier 1: High Impact, Near-Term (weekly coaching)**
+1. **Navneet** (58% → T5) — Closest to promo. Needs cross-team influence and AI-first thinking. **Action:** Give him the AI Course Recommender as a cross-BU showcase opportunity.
+2. **Pavel** (52% → T5) — Strong executor, needs strategic product thinking. **Action:** Have him present the Workday platform vision (not just the upgrade plan) to leadership.
+
+**Tier 2: Building Foundation (bi-weekly coaching)**
+3. **Kevin** (50% → T5) — Solid execution, needs strategic framing. **Action:** Challenge him to connect Academy work to business outcomes (advisor retention, NPS).
+4. **Sylesh** (48% → T5) — Implementation expert, needs product strategy muscle. **Action:** Have him draft a "Future of HRSD" vision doc beyond Phase 1.
+
+**Tier 3: Different Track (monthly strategic)**
+5. **Tammy** (45% → Director) — Already a Principal PM, targeting Director. Different conversation: help her build team leadership skills with Umang and Amith, and articulate a TA transformation vision.
+
+### Stretch Assignments to Create
+- **Cross-BU presentation** for Navneet (AI in Learning)
+- **Vision document** for Sylesh (HRSD beyond Phase 1)
+- **Business impact framing** for Kevin (Academy → advisor metrics)
+- **Team leadership showcase** for Tammy (how she's growing Umang & Amith)
+- **Platform strategy presentation** for Pavel (Workday roadmap vision)`;
+  }
+
+  // Default manager response
+  const tmMention = TEAM.find(t => q.includes(t.name.toLowerCase().split(' ')[0].toLowerCase()));
+  if (tmMention) {
+    const t = tmMention;
+    return `## ${t.name} — ${t.role} (${t.level})
+**${t.area}**
+${t.subReports ? `Sub-reports: ${t.subReports.join(', ')}` : ''}
+
+### Current Goals
+${t.goals.map(g => `- ${g.status === 'completed' ? '✅' : g.status === 'at_risk' ? '⚠️' : '🔵'} **${g.title}** — ${g.progress}%`).join('\n')}
+
+### Focus Areas
+${t.focus.map(f => `- ${f}`).join('\n')}
+
+### Promotion Trajectory
+**Target:** ${t.promoTarget} — **${t.readiness}% ready**
+**Strengths:** ${t.strengths.join(', ')}
+**Gaps:** ${t.growthAreas.join(', ')}
+
+### Recent Feedback
+> "${t.recentFeedback}"
+
+### Your Coaching Actions
+- Address growth areas: ${t.growthAreas[0]}
+- Create a stretch assignment targeting the gap
+- Collect peer feedback to calibrate readiness
+
+*Ask me to "draft feedback for ${t.name.split(' ')[0]}" or "prep my 1:1 with ${t.name.split(' ')[0]}" for more.*`;
+  }
+
+  return `## How I Can Help — Manager Mode
+
+I have full context on your ${TEAM.length} direct reports. Here's what I can do:
+
+**Your Team:** ${TEAM.map(t => `${t.name.split(' ')[0]} (${t.role})`).join(', ')}
+
+### Try asking me:
+- "Give me a team overview"
+- "Draft SBI feedback for Navneet"
+- "Prep my 1:1 with Pavel and Tammy"
+- "Who is closest to promotion?"
+- "What are the biggest risks right now?"
+- "Create development plans for my team"
+- "Tell me about Kevin" (or any team member)
+
+I'll give you structured, actionable responses based on real data.`;
 }
 
 /* ── ICONS ── */
@@ -264,15 +546,15 @@ function I({name,size=18,className=''}) {
     trend:'M22 7l-8.5 8.5-5-5L2 17M16 7h6v6',
     layers:'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
     cal:'M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 10h18M8 2v4M16 2v4',
-    key:'M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4',
     user:'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
     users:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
-    check:'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4 12 14.01 9 11.01',
     alert:'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01',
     zap:'M13 2 3 14h9l-1 8 10-12h-9z',
-    x:'M18 6 6 18M6 6l12 12',
     book:'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
     shield:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+    key:'M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4',
+    x:'M18 6 6 18M6 6l12 12',
+    check:'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4 12 14.01 9 11.01',
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d={paths[name]||paths.spark}/></svg>;
 }
@@ -314,36 +596,18 @@ function RenderMD({text}) {
     flush();
     if (tr === '') { els.push(<div key={i} className="h-2"/>); return; }
     if (tr.startsWith('### ')) { els.push(<h4 key={i} className="font-semibold text-[13px] text-white/80 mt-3 mb-1">{fmt(tr.slice(4))}</h4>); return; }
-    if (tr.startsWith('## ')) { els.push(<h3 key={i} className="font-bold text-[14px] text-white/90 mt-3 mb-1">{fmt(tr.slice(3))}</h3>); return; }
+    if (tr.startsWith('## ')) { els.push(<h3 key={i} className="font-bold text-[15px] text-white/90 mt-4 mb-1">{fmt(tr.slice(3))}</h3>); return; }
     if (tr.startsWith('# ')) { els.push(<h2 key={i} className="font-bold text-[16px] text-white mt-4 mb-1.5">{fmt(tr.slice(2))}</h2>); return; }
+    if (tr.startsWith('---')) { els.push(<hr key={i} className="border-white/10 my-3"/>); return; }
+    if (tr.startsWith('> ')) { els.push(<blockquote key={i} className="border-l-2 border-brand-500/40 pl-3 my-2 italic text-[13px] text-white/60">{fmt(tr.slice(2))}</blockquote>); return; }
+    if (tr.startsWith('|')) { els.push(<p key={i} className="text-[12px] text-white/50 font-mono my-0.5">{tr}</p>); return; }
     els.push(<p key={i} className="text-[13px] leading-relaxed text-white/75 my-0.5">{fmt(tr)}</p>);
   });
   flush();
   return <div>{els}</div>;
 }
 
-/* ── API KEY SETUP ── */
-function ApiKeySetup({onSave}) {
-  const [key,setKey]=useState('');
-  return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] backdrop-blur-sm">
-      <div className="bg-brand-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-white/10">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center agent-glow"><I name="spark" size={22} className="text-white"/></div>
-          <div><h2 className="font-bold text-lg text-white">PM&D Growth Agent</h2><p className="text-sm text-white/40">Connect your API key to power the agent</p></div>
-        </div>
-        <input type="password" placeholder="sk-ant-..." className="w-full px-4 py-3 rounded-xl border border-white/10 text-sm bg-white/5 text-white mb-3 placeholder:text-white/20 focus:outline-none focus:border-brand-500/50 focus:ring-2 focus:ring-brand-500/20" value={key} onChange={e=>setKey(e.target.value)} onKeyDown={e=>e.key==='Enter'&&key.trim()&&onSave(key.trim())}/>
-        <p className="text-[11px] text-white/25 mb-5">Stored locally. Only sent to the Anthropic API.</p>
-        <div className="flex gap-2">
-          <button onClick={()=>key.trim()&&onSave(key.trim())} className="flex-1 bg-gradient-to-r from-brand-500 to-violet-500 text-white py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity">Connect</button>
-          <button onClick={()=>onSave('SKIP')} className="px-5 py-3 rounded-xl text-sm font-medium text-white/30 border border-white/10 hover:bg-white/5 transition-colors">Skip</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── CONTEXT PANEL — EMPLOYEE ── */
+/* ── CONTEXT PANELS ── */
 function EmployeeContext() {
   return (
     <div className="grid grid-cols-3 gap-5">
@@ -367,14 +631,13 @@ function EmployeeContext() {
   );
 }
 
-/* ── CONTEXT PANEL — MANAGER ── */
 function ManagerContext() {
   return (
     <div>
       <div className="grid grid-cols-6 gap-3 mb-4">
         {TEAM.map((t,i)=>(
           <div key={i} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-            <div className="flex items-center gap-2 mb-2"><div className="w-6 h-6 rounded-full bg-brand-500/20 flex items-center justify-center text-[9px] font-bold text-brand-300">{t.name.split(' ')[0][0]}</div><div><p className="text-[11px] text-white/70 font-semibold">{t.name.split(' ')[0]}</p><p className="text-[9px] text-white/25">{t.role}</p></div></div>
+            <div className="flex items-center gap-2 mb-2"><div className="w-6 h-6 rounded-full bg-brand-500/20 flex items-center justify-center text-[9px] font-bold text-brand-300">{t.name[0]}</div><div><p className="text-[11px] text-white/70 font-semibold">{t.name.split(' ')[0]}</p><p className="text-[9px] text-white/25">{t.role}</p></div></div>
             <p className="text-[10px] text-white/35 line-clamp-2 mb-2">{t.area}</p>
             <div className="flex items-center gap-1.5"><div className="flex-1 bg-white/10 rounded-full h-1"><div className="bg-brand-500 h-1 rounded-full" style={{width:`${t.readiness}%`}}/></div><span className="text-[9px] text-white/25">{t.readiness}%</span></div>
             {t.subReports && <p className="text-[9px] text-white/20 mt-1.5">+{t.subReports.join(', ')}</p>}
@@ -382,8 +645,8 @@ function ManagerContext() {
         ))}
       </div>
       <div>
-        <p className="text-[10px] text-white/25 uppercase tracking-wider font-semibold mb-1.5">Portfolio Risks</p>
-        <div className="flex flex-wrap gap-2">{RISKS.slice(0,3).map((r,i)=><span key={i} className="text-[10px] text-amber-300/70 bg-amber-500/10 border border-amber-500/15 px-2 py-1 rounded-lg">{r.split(':')[0]}</span>)}</div>
+        <p className="text-[10px] text-white/25 uppercase tracking-wider font-semibold mb-1.5">Active Risks</p>
+        <div className="flex flex-wrap gap-2">{RISKS.slice(0,3).map((r,i)=><span key={i} className="text-[10px] text-amber-300/70 bg-amber-500/10 border border-amber-500/15 px-2 py-1 rounded-lg">{r.split(':')[0]}:{r.split(':')[1]?.slice(0,40)}...</span>)}</div>
       </div>
     </div>
   );
@@ -395,22 +658,15 @@ function App() {
   const [msgs,setMsgs]=useState([]);
   const [input,setInput]=useState('');
   const [loading,setLoading]=useState(false);
-  const [showKey,setShowKey]=useState(!localStorage.getItem('anthropic_api_key'));
   const [showCtx,setShowCtx]=useState(false);
   const endRef=useRef(null);
   const inputRef=useRef(null);
 
   useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'});},[msgs,loading]);
-  useEffect(()=>{if(!showKey)inputRef.current?.focus();},[showKey]);
+  useEffect(()=>{inputRef.current?.focus();},[]);
 
-  // Clear chat when switching modes
   const switchMode = (newMode) => {
     if (newMode !== mode) { setMode(newMode); setMsgs([]); }
-  };
-
-  const saveKey = (key) => {
-    localStorage.setItem('anthropic_api_key', key === 'SKIP' ? '' : key);
-    setShowKey(false);
   };
 
   const send = async (text) => {
@@ -421,37 +677,61 @@ function App() {
     if (ta) ta.style.height = 'auto';
     setMsgs(p=>[...p,{role:'user',content:userMsg}]);
     setLoading(true);
-    try {
-      const apiMsgs = [...msgs, {role:'user',content:userMsg}].map(m=>({role:m.role,content:m.content}));
-      const result = await callClaude(apiMsgs, mode);
-      setMsgs(p=>[...p,{role:'assistant',content:result}]);
-    } catch(e) {
-      const errMsg = e.message === 'NO_KEY' ? 'Please add your API key. Click the key icon in the header.' : 'Error: ' + e.message;
-      setMsgs(p=>[...p,{role:'assistant',content:errMsg}]);
+
+    // Simulate thinking delay for realism
+    await new Promise(r => setTimeout(r, 600 + Math.random() * 800));
+
+    // Check for API key — if available, use Claude; otherwise use local engine
+    const apiKey = localStorage.getItem('anthropic_api_key');
+    if (apiKey && apiKey.startsWith('sk-')) {
+      try {
+        const apiMsgs = [...msgs, {role:'user',content:userMsg}].map(m=>({role:m.role,content:m.content}));
+        const systemPrompt = buildSystemPrompt(mode);
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2048, system: systemPrompt, messages: apiMsgs }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setMsgs(p=>[...p,{role:'assistant',content:data.content[0].text}]);
+          setLoading(false);
+          return;
+        }
+      } catch(e) { /* fall through to local engine */ }
     }
+
+    // Local intelligent response engine
+    const result = generateResponse(userMsg, mode);
+    setMsgs(p=>[...p,{role:'assistant',content:result}]);
     setLoading(false);
   };
 
+  function buildSystemPrompt(m) {
+    const base = `You are the PM&D Growth Agent for Intuit PMs. Use markdown. Be structured, specific, actionable. Reference actual data.`;
+    if (m === 'employee') return base + `\nUser: ${ME.name}, ${ME.role}, ${ME.team}. Target: ${ME.target}. Readiness: ${ME.promoReadiness}%. Wins: ${ME.recentWins.join('; ')}. Gaps: ${ME.promoGaps.join('; ')}.`;
+    return base + `\nManager mode for ${ME.name}. Team: ${TEAM.map(t=>`${t.name} (${t.role}, ${t.area}, ${t.readiness}% ready)`).join('; ')}. Risks: ${RISKS.join('; ')}`;
+  }
+
   const empCaps = [
-    {icon:'award',label:'Promotion Case',prompt:'Assess my promotion readiness for Director. What evidence do I have and what gaps remain?',color:'#EC4899',desc:'Director readiness'},
-    {icon:'target',label:'My Goals',prompt:'Review my personal goals and tell me what needs attention to build my Director case.',color:'#0077C5',desc:'Track personal goals'},
-    {icon:'layers',label:'Craft Skills',prompt:'Analyze my craft skills against the Director rubric. Where are my gaps and how do I close them?',color:'#F59E0B',desc:'Assess against rubric'},
-    {icon:'trend',label:'Development',prompt:'Create a 90-day development plan to accelerate my Director readiness. Focus on Org Effectiveness and Technology Fluency gaps.',color:'#14B8A6',desc:'Growth plan'},
-    {icon:'zap',label:'Vision Strategy',prompt:'How can I leverage the Enterprise Vision Strategy I delivered to build my case for Director? What should I do next with it?',color:'#8B5CF6',desc:'Leverage key wins'},
-    {icon:'book',label:'Feedback Review',prompt:'Analyze the feedback I have received and identify themes. What should I act on for my Director case?',color:'#10B981',desc:'Feedback themes'},
+    {icon:'award',label:'Promotion Case',prompt:'Assess my promotion readiness for Director and identify what gaps remain.',color:'#EC4899',desc:'Director readiness'},
+    {icon:'target',label:'My Goals',prompt:'Review my personal goals and tell me what needs attention this week.',color:'#0077C5',desc:'Track personal goals'},
+    {icon:'layers',label:'Craft Skills',prompt:'Analyze my craft skills against the Director rubric. Where are my biggest gaps?',color:'#F59E0B',desc:'Assess against rubric'},
+    {icon:'trend',label:'Development Plan',prompt:'Create a 90-day development plan to accelerate my Director readiness.',color:'#14B8A6',desc:'Growth roadmap'},
+    {icon:'zap',label:'Vision Strategy',prompt:'How can I leverage the Enterprise Vision Strategy I delivered to build my Director case?',color:'#8B5CF6',desc:'Leverage key wins'},
+    {icon:'book',label:'Feedback Review',prompt:'Analyze the feedback I have received and identify themes for my Director case.',color:'#10B981',desc:'Feedback themes'},
   ];
 
   const mgrCaps = [
-    {icon:'users',label:'Team Overview',prompt:'Give me a status overview of my entire team — each person, their goals, readiness, and what needs my attention.',color:'#0077C5',desc:'Full team status'},
-    {icon:'msg',label:'Draft Feedback',prompt:'Help me draft SBI feedback for each of my direct reports based on their recent work.',color:'#10B981',desc:'SBI for any report'},
-    {icon:'cal',label:'1:1 Prep',prompt:'Prepare my 1:1 agendas for this week. I have meetings with Navneet, Tammy, and Pavel. Prioritize by risk.',color:'#8B5CF6',desc:'Auto-generate agendas'},
-    {icon:'award',label:'Team Readiness',prompt:'Assess promotion readiness for each of my direct reports. Who is closest and what do they need?',color:'#EC4899',desc:'Promo readiness'},
+    {icon:'users',label:'Team Overview',prompt:'Give me a status overview of my entire team — goals, readiness, and what needs attention.',color:'#0077C5',desc:'Full team status'},
+    {icon:'msg',label:'Draft Feedback',prompt:'Draft SBI feedback for Navneet on the CAMP Phase 2 rollout.',color:'#10B981',desc:'SBI for any report'},
+    {icon:'cal',label:'1:1 Prep',prompt:'Prepare my 1:1 agendas for Pavel and Tammy. Prioritize by risk.',color:'#8B5CF6',desc:'Auto-generate agendas'},
+    {icon:'award',label:'Team Readiness',prompt:'Assess promotion readiness for each of my direct reports. Who is closest?',color:'#EC4899',desc:'Promo readiness'},
     {icon:'alert',label:'Risk Review',prompt:'What are the biggest risks across my portfolio right now? Prioritize and suggest mitigations.',color:'#EF4444',desc:'CRAIDs & blockers'},
     {icon:'trend',label:'Team Development',prompt:'Create development plans for my team. Who should I invest the most coaching time in?',color:'#14B8A6',desc:'Coaching priorities'},
   ];
 
   const caps = mode === 'employee' ? empCaps : mgrCaps;
-
   const quickPrompts = msgs.length > 0 ? (mode === 'employee' ? [
     'What should I focus on this week?',
     'How do I strengthen Org Effectiveness?',
@@ -459,44 +739,33 @@ function App() {
     'How can I increase AI-first visibility?',
   ] : [
     'Who needs my attention most?',
-    'Draft feedback for Tammy on Avature',
-    'Prep my 1:1 with Pavel on Promotions R1',
-    'Which team member is closest to promo?',
+    'Draft feedback for Tammy',
+    'Prep my 1:1 with Pavel',
+    'Who is closest to promo?',
     'Summarize portfolio risks',
-    'Write feedback for Navneet on CAMP',
+    'Tell me about Sylesh',
   ]) : [];
 
   return (
     <div className="h-screen flex flex-col bg-brand-900">
-      {showKey && <ApiKeySetup onSave={saveKey}/>}
-
       {/* Header */}
       <header className="shrink-0 border-b border-white/[0.06]">
         <div className="max-w-4xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center agent-glow"><I name="spark" size={18} className="text-white"/></div>
-            <div><h1 className="text-[15px] font-bold text-white tracking-tight">PM&D Growth Agent</h1><p className="text-[11px] text-white/25">Powered by Claude AI · {ME.name} · {ME.role}</p></div>
+            <div><h1 className="text-[15px] font-bold text-white tracking-tight">PM&D Growth Agent</h1><p className="text-[11px] text-white/25">{ME.name} · {ME.role} · {ME.team.split('—')[0].trim()}</p></div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Mode Toggle */}
             <div className="flex bg-white/[0.06] rounded-lg p-0.5">
               <button onClick={()=>switchMode('employee')} className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${mode==='employee'?'bg-brand-500 text-white shadow-lg shadow-brand-500/20':'text-white/30 hover:text-white/50'}`}><I name="user" size={12}/> My Growth</button>
               <button onClick={()=>switchMode('manager')} className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${mode==='manager'?'bg-brand-500 text-white shadow-lg shadow-brand-500/20':'text-white/30 hover:text-white/50'}`}><I name="users" size={12}/> My Team</button>
             </div>
             <button onClick={()=>setShowCtx(!showCtx)} className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition-all ${showCtx?'text-white/60 border-white/15 bg-white/5':'text-white/25 border-white/[0.06] hover:bg-white/5'}`}>Context</button>
-            <button onClick={()=>setShowKey(true)} className="p-2 rounded-lg text-white/15 hover:text-white/40 hover:bg-white/5 transition-all"><I name="key" size={14}/></button>
           </div>
         </div>
       </header>
 
-      {/* Context Panel */}
-      {showCtx && (
-        <div className="shrink-0 border-b border-white/[0.06] bg-white/[0.015] fade-up">
-          <div className="max-w-4xl mx-auto px-6 py-4">
-            {mode === 'employee' ? <EmployeeContext/> : <ManagerContext/>}
-          </div>
-        </div>
-      )}
+      {showCtx && <div className="shrink-0 border-b border-white/[0.06] bg-white/[0.015] fade-up"><div className="max-w-4xl mx-auto px-6 py-4">{mode==='employee'?<EmployeeContext/>:<ManagerContext/>}</div></div>}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
@@ -558,7 +827,7 @@ function App() {
               <button onClick={()=>send()} disabled={loading||!input.trim()} className="absolute right-2 bottom-2 w-8 h-8 rounded-lg bg-brand-500 text-white flex items-center justify-center hover:bg-brand-600 transition-colors disabled:opacity-20"><I name="send" size={14}/></button>
             </div>
           </div>
-          <p className="text-[10px] text-white/10 mt-2.5 text-center">{mode==='employee'?`${ME.personalGoals.length} goals · ${ME.promoReadiness}% Director readiness · ${Object.keys(ME.skills).length} craft pillars`:`${TEAM.length} reports · ${TEAM.reduce((a,t)=>a+t.goals.length,0)} team goals · ${RISKS.length} active risks`}</p>
+          <p className="text-[10px] text-white/10 mt-2.5 text-center">{mode==='employee'?`${ME.personalGoals.length} goals · ${ME.promoReadiness}% Director readiness · ${Object.keys(ME.skills).length} craft pillars`:`${TEAM.length} reports · ${TEAM.reduce((a,t)=>a+t.goals.length,0)} team goals · ${RISKS.length} active risks`} · Will use Claude API if key is available</p>
         </div>
       </div>
     </div>
