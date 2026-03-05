@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PM&D Growth Agent — Intuit Performance Ecosystem</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            intuit: { blue: '#0077C5', dark: '#1A1A2E', green: '#2CA01C', navy: '#0D2B4E', light: '#E8F4FD', accent: '#6C5CE7', warm: '#FF6B35' }
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.13.3/umd/Recharts.js"></script>
+  <style>
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .typing-dot { animation: pulse-dot 1.4s infinite; }
+    .typing-dot:nth-child(2) { animation-delay:.2s; }
+    .typing-dot:nth-child(3) { animation-delay:.4s; }
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:#d1d5db; border-radius:3px; }
+    body { margin:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+const { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } = Recharts;
+
+// ============ DATA ============
+const LEVELS = [
+  { id:'pm2', label:'PM2 (T2)' }, { id:'senior', label:'Senior PM (T3)' },
+  { id:'staff', label:'Staff PM (T4) / M2' }, { id:'senior_staff', label:'Senior Staff PM (T5)' },
+  { id:'principal', label:'Principal PM (T6) / M3' }, { id:'distinguished', label:'Distinguished PM (T7) / Director (M4)' },
+  { id:'vp', label:'VP (M6)' },
+];
+
+const CRAFT_PILLARS = [
+  { id:'product_strategy', name:'Product Strategy', color:'#0077C5',
+    description:'Applies customer empathy, business acumen, and AI-first product expertise to develop a winning product vision, strategy and roadmap.',
+    levels:{
+      staff:['Expert at deepening understanding of the customer problem with experimentation, predictive analytics & AI tools','Drives team alignment on target customer, connecting personas with product strategy','Defines product strategy for offering/capability to drive business growth','Navigates team dynamics to influence across partner teams','Leverages in-depth product expertise across products and AI tools to optimize roadmaps'],
+      senior_staff:['Evangelizes customer personas to influence alignment across teams','Challenges teams to deliver delightful experiences leveraging D4D + AI','Sets business outcome objectives tied to product roadmap','Demonstrates deep understanding of BU offerings to influence adjacent roadmaps'],
+      pm2:['Leverages AI-enabled research and behavioral signals to understand customer needs','Prioritizes highest impact customer problems','Has understanding of market, competitive landscape, and AI opportunities','Can articulate the customer value proposition'],
+      senior:['Identifies and prioritizes unsolved customer problems for biggest impact','Uses AI research to synthesize customer context','Leverages emerging market trends and AI transformation knowledge','Has deep knowledge of their product ecosystem'],
+    }
+  },
+  { id:'product_execution', name:'Product Execution', color:'#2CA01C',
+    description:'Delivers customer experiences and business outcomes reimagined by AI through end to end ownership, focus on results, and critical thinking.',
+    levels:{
+      staff:['Defines high-quality E2E product experience across multiple products and domains','Demonstrates high bar for product excellence','Identifies improvements across processes, tools, AI leverage & systems','Facilitates cross functional teams using AI as accelerant','Uses data, AI methodology and domain expertise to solve complex problems'],
+      senior_staff:['Defines roadmaps with cross-team dependencies','Leads cross-functional team for high-quality E2E experiences','Drives improvements across processes, tools, AI capabilities','Plans overall input goals and delivers business results','Leverages AI to triangulate user data and competitive intelligence'],
+      pm2:['Defines problem statement, requirements, and success metrics','Demonstrates effective project management with AI tools','Executes product roadmap with guidance','Breaks down complex problems augmented by AI'],
+      senior:['Defines E2E product experience tied to success metrics','Excels at project management augmented by AI tools','Balances short & long term deliverables','Solves challenges through structured analysis and AI methodology'],
+    }
+  },
+  { id:'technology_fluency', name:'Technology Fluency', color:'#6C5CE7',
+    description:'Leverages technical acumen, platform mindset, data-driven approach, and AI-first mindset to unlock velocity and innovation.',
+    levels:{
+      staff:['Partners with engineering to define technology approaches with AI-first mindset','Uses self-serve tooling, dashboards, vibecode prototyping, LLMs','Expands business needs into durable capability strategies including AI agents','Triangulates data across products','Trains others on emerging AI tools and capabilities'],
+      senior_staff:['Translates business requirements with engineering for AI-first technical decisions','Defines capability strategies with cross-capability AI reusability','Analyzes data with complexity to identify trends','Influences product decisions across portfolio for AI leverage','Coaches AI experimentation and evangelizes trends'],
+      pm2:['Understands components scrum teams are delivering','Balances product, data/AI and technology backlogs','Learns Intuit city map for building roadmap','Partners with data and AI science teams'],
+      senior:['Creates requirements considering technology and AI capabilities','Partners with engineering to influence backlogs','Defines features as durable capabilities for AI agents','Leverages data for roadmap prioritization','Experiments with emerging AI tools'],
+    }
+  },
+  { id:'org_effectiveness', name:'Organizational Effectiveness', color:'#FF6B35',
+    description:'Drives product excellence through data-driven decision making, AI-enhanced collaboration, and clear communications.',
+    levels:{
+      staff:['Drives domain product decisions based on data and business needs','Incorporates AI into prioritization frameworks','Partners across cross-functional teams proactively','Builds shared understanding through data-driven storytelling','Accelerates cross-functional execution through AI prototyped experiences','Influences across multiple product teams when adapting to changes'],
+      senior_staff:['Drives complex strategic decisions across multiple teams','Simplifies and accelerates decision-making with AI','Skilled storyteller, communicator and negotiator','Sets clear vision and accelerates teams through AI prototyping','Proactively leads plan adaptation based on market and AI trends'],
+      pm2:['Impacts product decisions at team level based on data','Leverages AI to summarize insights for faster decisions','Uses AI productivity tools to articulate work and ideas','Enhances artifacts with AI prototyped experiences','Identifies opportunities to adapt plans based on changes'],
+      senior:['Makes product decisions across team based on data and business needs','Presents ideas with data-driven storytelling and AI tooling','Accelerates team execution through AI prototyped experiences','Drives changes when priorities shift'],
+    }
+  },
+];
+
+const MOCK_GOALS = [
+  { id:1, title:'Launch AI-powered onboarding flow for SMB segment', status:'on_track', progress:72, pillar:'product_execution', due:'2026-06-30',
+    krs:[{l:'Reduce time-to-value by 40%',p:65},{l:'Achieve 4.5+ CSAT in onboarding',p:80},{l:'Ship to 100% of new SMB users',p:70}] },
+  { id:2, title:'Define 3-year platform capability strategy for AI agents', status:'on_track', progress:55, pillar:'product_strategy', due:'2026-04-15',
+    krs:[{l:'Complete competitive analysis',p:90},{l:'Get VP alignment on strategy doc',p:40},{l:'Define year 1 execution milestones',p:35}] },
+  { id:3, title:'Improve cross-team data pipeline reliability to 99.9%', status:'at_risk', progress:38, pillar:'technology_fluency', due:'2026-05-30',
+    krs:[{l:'Identify all failure points',p:80},{l:'Implement monitoring dashboards',p:30},{l:'Achieve 99.9% uptime',p:5}] },
+  { id:4, title:'Mentor 2 junior PMs through first major launch', status:'on_track', progress:60, pillar:'org_effectiveness', due:'2026-07-31',
+    krs:[{l:'Establish weekly coaching sessions',p:100},{l:'Support PM1 through beta launch',p:45},{l:'Support PM2 through GA readiness',p:35}] },
+];
+
+const MOCK_FEEDBACK = [
+  { id:1, from:'Sarah Kim (Manager)', date:'2026-02-15', type:'manager', pillar:'product_execution', summary:'Exceptional execution on the SMB onboarding project. Demonstrated strong bias to action and moved from ideation to delivery with minimal friction.', sentiment:'positive' },
+  { id:2, from:'James Liu (XFN - Eng)', date:'2026-02-01', type:'peer', pillar:'technology_fluency', summary:'Great collaboration on defining tech requirements for the AI agent framework. Your understanding of platform constraints was impressive.', sentiment:'positive' },
+  { id:3, from:'Priya Patel (XFN - Design)', date:'2026-01-20', type:'peer', pillar:'org_effectiveness', summary:'Stakeholder communication could improve. Some design decisions were shared late, impacting our sprint planning.', sentiment:'constructive' },
+  { id:4, from:'Mark Johnson (Skip-level)', date:'2026-01-10', type:'leadership', pillar:'product_strategy', summary:'Strong strategic thinking on the 3-year platform vision. Continue to push for more data-backed storytelling when presenting to senior leadership.', sentiment:'positive' },
+];
+
+const PERFORMANCE_TIMELINE = [
+  {month:'Sep',goals:3.2,feedback:3.0,execution:3.5},{month:'Oct',goals:3.4,feedback:3.2,execution:3.6},
+  {month:'Nov',goals:3.5,feedback:3.5,execution:3.7},{month:'Dec',goals:3.6,feedback:3.4,execution:3.8},
+  {month:'Jan',goals:3.7,feedback:3.6,execution:4.0},{month:'Feb',goals:3.8,feedback:3.7,execution:4.1},
+];
+
+const CHECKIN_TOPICS = [
+  { priority:'high', topic:'SMB onboarding: Discuss beta feedback and plan for GA', source:'Goal Progress' },
+  { priority:'high', topic:'Data pipeline reliability at-risk — need resource discussion', source:'Risk Signal' },
+  { priority:'medium', topic:"Follow up on Priya's feedback about stakeholder communication", source:'Feedback Theme' },
+  { priority:'medium', topic:'Platform strategy doc: VP alignment meeting prep', source:'Goal Progress' },
+  { priority:'low', topic:'Junior PM mentoring progress check', source:'Development Goal' },
+];
+
+const RADAR_DATA = [
+  {skill:'Product Strategy',self:3.5,manager:3.8,target:4.0},
+  {skill:'Product Execution',self:4.0,manager:4.2,target:4.0},
+  {skill:'Tech Fluency',self:3.2,manager:3.0,target:3.5},
+  {skill:'Org Effectiveness',self:3.5,manager:3.3,target:4.0},
+];
+
+const AGENTS_LIST = [
+  { name:'Goals Coach', desc:'Generates and refines goals aligned to craft skills and business outcomes.', color:'#0077C5' },
+  { name:'Feedback Coach', desc:'SBI-model feedback drafting with bias detection and theme analysis.', color:'#2CA01C' },
+  { name:'Check-in Assistant', desc:'Auto-generated agendas from goal progress, feedback, and risk signals.', color:'#6C5CE7' },
+  { name:'Promotion Coach', desc:'Evidence assembly mapped to rubric with narrative generation.', color:'#E84393' },
+];
+
+const PILLAR_NAMES = { product_strategy:'Product Strategy', product_execution:'Product Execution', technology_fluency:'Technology Fluency', org_effectiveness:'Org Effectiveness' };
+const SKILL_ASSESSMENT = { product_strategy:{self:3.5,manager:3.8,target:4.0}, product_execution:{self:4.0,manager:4.2,target:4.0}, technology_fluency:{self:3.2,manager:3.0,target:3.5}, org_effectiveness:{self:3.5,manager:3.3,target:4.0} };
+
+const PROMO_EVIDENCE = [
+  { title:'SMB AI Onboarding — GA Launch', date:'Jan 2026', impact:'35% time-to-value reduction for 50K users', pillar:'Product Execution', score:90 },
+  { title:'Platform Capability Framework v2', date:'Nov 2025', impact:'Enabled 3 teams on shared AI infrastructure', pillar:'Technology Fluency', score:75 },
+  { title:'3-Year AI Platform Strategy', date:'Feb 2026', impact:'VP-approved, guiding $10M+ investment', pillar:'Product Strategy', score:82 },
+  { title:'Cross-team collaboration recognition', date:'Ongoing', impact:'5 peer feedback mentions', pillar:'Product Execution', score:88 },
+  { title:'Mentored 2 junior PMs', date:'FY26', impact:'Both mentees promoted', pillar:'Org Effectiveness', score:70 },
+];
+
+const DEV_RECS = [
+  { type:'course', title:'AI Product Strategy Masterclass', provider:'Degreed', priority:'high' },
+  { type:'stretch', title:'Lead cross-BU architecture review for Q3', priority:'high' },
+  { type:'mentor', title:'Connect with VP of Platform for strategic coaching', priority:'medium' },
+  { type:'course', title:'Influencing Without Authority', provider:'Degreed', priority:'medium' },
+  { type:'project', title:'Volunteer for AI Hackathon judging', priority:'low' },
+];
+
+const RUBRIC_MATCH = [
+  { skill:'Defines roadmaps with cross-team dependencies', demonstrated:true, evidence:'Platform Strategy Doc, SMB Launch' },
+  { skill:'Drives improvements across processes, tools, AI capabilities', demonstrated:true, evidence:'Capability Framework v2' },
+  { skill:'Plans overall input goals and delivers business results', demonstrated:true, evidence:'Q1-Q2 goal attainment at 85%' },
+  { skill:'Evangelizes customer personas to influence alignment', demonstrated:false, evidence:'Need more cross-BU examples' },
+  { skill:'Sets business outcome objectives tied to roadmap', demonstrated:false, evidence:'Need P&L-linked goal examples' },
+  { skill:'Simplifies decision-making with AI', demonstrated:'partial', evidence:'Some examples, needs visibility' },
+];
+
+// ============ ICONS (SVG) ============
+function Icon({ name, size=18, className='' }) {
+  const s = size;
+  const icons = {
+    dashboard: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+    target: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+    message: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+    calendar: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+    layers: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>,
+    award: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>,
+    trending: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
+    bot: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,
+    sparkle: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>,
+    check: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+    alert: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+    send: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
+    x: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+    user: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+    briefcase: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>,
+    zap: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+    shield: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+    lightbulb: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>,
+    book: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
+    circle: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/></svg>,
+    file: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+    chevron: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>,
+    chevronUp: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>,
+    plus: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+    thumbsUp: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88Z"/></svg>,
+    arrow: <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+  };
+  return <span className={className}>{icons[name] || icons.circle}</span>;
+}
+
+// ============ SIDEBAR ============
+const NAV = [
+  {id:'dashboard',icon:'dashboard',label:'Dashboard'},
+  {id:'goals',icon:'target',label:'Goals Coach'},
+  {id:'feedback',icon:'message',label:'Feedback Coach'},
+  {id:'checkin',icon:'calendar',label:'1:1 Prep'},
+  {id:'skills',icon:'layers',label:'Craft Skills'},
+  {id:'promotion',icon:'award',label:'Promotion Readiness'},
+  {id:'development',icon:'trending',label:'Development Plan'},
+];
+
+function Sidebar({ page, setPage, persona, setPersona }) {
+  return (
+    <aside className="w-60 bg-[#0D2B4E] text-white flex flex-col h-screen shrink-0">
+      <div className="p-4 border-b border-white/10">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-8 h-8 rounded-lg bg-[#0077C5] flex items-center justify-center"><Icon name="bot" size={16}/></div>
+          <div><p className="font-bold text-sm leading-tight">PM&D Agent</p><p className="text-[10px] text-blue-300">Performance & Growth</p></div>
+        </div>
+        <div className="flex bg-white/10 rounded-lg p-0.5">
+          <button onClick={()=>setPersona('employee')} className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs font-medium transition-all ${persona==='employee'?'bg-[#0077C5] text-white shadow':'text-blue-200 hover:text-white'}`}>
+            <Icon name="user" size={12}/> Employee
+          </button>
+          <button onClick={()=>setPersona('manager')} className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs font-medium transition-all ${persona==='manager'?'bg-[#0077C5] text-white shadow':'text-blue-200 hover:text-white'}`}>
+            <Icon name="briefcase" size={12}/> Manager
+          </button>
+        </div>
+      </div>
+      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+        {NAV.map(n=>(
+          <button key={n.id} onClick={()=>setPage(n.id)} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all text-left ${page===n.id?'bg-[#0077C5]/20 text-white font-medium':'text-blue-200 hover:bg-white/5 hover:text-white'}`}>
+            <Icon name={n.icon} size={16}/> {n.label}
+          </button>
+        ))}
+      </nav>
+      <div className="p-3 border-t border-white/10">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-[#0077C5]/30 flex items-center justify-center text-[10px] font-bold">AC</div>
+          <div><p className="text-xs font-medium">Alex Chen</p><p className="text-[10px] text-blue-300">Staff PM (T4)</p></div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+// ============ DASHBOARD ============
+function Dashboard({ persona }) {
+  const onTrack = MOCK_GOALS.filter(g=>g.status==='on_track').length;
+  const atRisk = MOCK_GOALS.filter(g=>g.status==='at_risk').length;
+  return (
+    <div className="p-6 max-w-7xl mx-auto space-y-5">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{persona==='employee'?'My Performance Dashboard':'Team Performance Dashboard'}</h1>
+          <p className="text-gray-500 text-sm mt-1">{persona==='employee'?"Welcome back, Alex. Here's your performance snapshot.":'AI-powered insights across your team.'}</p>
+        </div>
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700"><Icon name="zap" size={12}/> AI Agent Active</span>
+      </div>
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-4">
+        {[
+          {icon:'target',color:'bg-blue-50 text-[#0077C5]',val:MOCK_GOALS.length,label:'Active Goals',sub:<>{onTrack} on track, {atRisk} at risk</>},
+          {icon:'message',color:'bg-emerald-50 text-emerald-600',val:MOCK_FEEDBACK.length,label:'Feedback Items',sub:<>{MOCK_FEEDBACK.filter(f=>f.sentiment==='positive').length} positive</>},
+          {icon:'award',color:'bg-purple-50 text-purple-600',val:'68%',label:'Promo Readiness',sub:<div className="w-full bg-gray-100 rounded-full h-1.5 mt-1"><div className="bg-purple-500 h-1.5 rounded-full" style={{width:'68%'}}/></div>},
+          {icon:'calendar',color:'bg-amber-50 text-amber-600',val:'3',label:'Days to Next 1:1',sub:<span className="text-xs text-[#0077C5] cursor-pointer hover:underline">View prep →</span>},
+        ].map((s,i)=>(
+          <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center gap-3 mb-1">
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${s.color}`}><Icon name={s.icon} size={18}/></div>
+              <div><p className="text-2xl font-bold">{s.val}</p><p className="text-[11px] text-gray-500">{s.label}</p></div>
+            </div>
+            <div className="mt-1 text-xs text-gray-500">{s.sub}</div>
+          </div>
+        ))}
+      </div>
+      {/* Charts */}
+      <div className="grid grid-cols-2 gap-5">
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="font-semibold text-sm mb-3">Craft Skills Radar</h3>
+          <ResponsiveContainer width="100%" height={260}>
+            <RadarChart data={RADAR_DATA}>
+              <PolarGrid strokeDasharray="3 3"/><PolarAngleAxis dataKey="skill" tick={{fontSize:11}}/><PolarRadiusAxis angle={90} domain={[0,5]} tick={{fontSize:10}}/>
+              <Radar name="Self" dataKey="self" stroke="#0077C5" fill="#0077C5" fillOpacity={0.15} strokeWidth={2}/>
+              <Radar name="Manager" dataKey="manager" stroke="#2CA01C" fill="#2CA01C" fillOpacity={0.1} strokeWidth={2}/>
+              <Radar name="Target" dataKey="target" stroke="#FF6B35" fill="none" strokeWidth={2} strokeDasharray="5 5"/>
+              <Tooltip/>
+            </RadarChart>
+          </ResponsiveContainer>
+          <div className="flex justify-center gap-4 mt-1">
+            <span className="flex items-center gap-1 text-[11px]"><span className="w-3 h-0.5 bg-[#0077C5] inline-block"/> Self</span>
+            <span className="flex items-center gap-1 text-[11px]"><span className="w-3 h-0.5 bg-[#2CA01C] inline-block"/> Manager</span>
+            <span className="flex items-center gap-1 text-[11px]"><span className="w-3 h-0.5 bg-[#FF6B35] inline-block"/> Target</span>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="font-semibold text-sm mb-3">Performance Trend (6 months)</h3>
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={PERFORMANCE_TIMELINE}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/><XAxis dataKey="month" tick={{fontSize:12}}/><YAxis domain={[2.5,4.5]} tick={{fontSize:11}}/><Tooltip/>
+              <Line type="monotone" dataKey="goals" stroke="#0077C5" strokeWidth={2} name="Goals" dot={{r:3}}/>
+              <Line type="monotone" dataKey="feedback" stroke="#2CA01C" strokeWidth={2} name="Feedback" dot={{r:3}}/>
+              <Line type="monotone" dataKey="execution" stroke="#6C5CE7" strokeWidth={2} name="Execution" dot={{r:3}}/>
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      {/* Goals + Feedback */}
+      <div className="grid grid-cols-2 gap-5">
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="font-semibold text-sm mb-3">Active Goals</h3>
+          <div className="space-y-2">
+            {MOCK_GOALS.map(g=>(
+              <div key={g.id} className="flex items-start gap-2.5 p-2.5 rounded-lg bg-gray-50">
+                <span className={`mt-0.5 ${g.status==='on_track'?'text-emerald-500':'text-amber-500'}`}><Icon name={g.status==='on_track'?'check':'alert'} size={15}/></span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{g.title}</p>
+                  <div className="flex items-center gap-2 mt-1"><div className="flex-1 bg-gray-200 rounded-full h-1.5"><div className={`h-1.5 rounded-full ${g.status==='at_risk'?'bg-amber-500':'bg-[#0077C5]'}`} style={{width:`${g.progress}%`}}/></div><span className="text-[11px] text-gray-500">{g.progress}%</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="font-semibold text-sm mb-3">Recent Feedback</h3>
+          <div className="space-y-2">
+            {MOCK_FEEDBACK.map(f=>(
+              <div key={f.id} className="p-2.5 rounded-lg bg-gray-50">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs font-medium">{f.from}</p>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${f.sentiment==='positive'?'bg-emerald-50 text-emerald-700':'bg-purple-50 text-purple-700'}`}>{f.sentiment}</span>
+                </div>
+                <p className="text-xs text-gray-600 line-clamp-2">{f.summary}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      {/* Agents */}
+      <div>
+        <h3 className="font-semibold text-sm mb-3">Your AI Agents</h3>
+        <div className="grid grid-cols-4 gap-3">
+          {AGENTS_LIST.map((a,i)=>(
+            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-lg hover:border-[#0077C5]/30 transition-all cursor-pointer">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2" style={{backgroundColor:`${a.color}15`}}>
+                <div className="w-3 h-3 rounded-full" style={{backgroundColor:a.color}}/>
+              </div>
+              <p className="text-sm font-medium">{a.name}</p>
+              <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">{a.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============ GOALS COACH ============
+function GoalsCoach() {
+  const [expanded, setExpanded] = useState(null);
+  const [draft, setDraft] = useState('');
+  const [aiOut, setAiOut] = useState('');
+
+  const handleGen = () => {
+    if (!draft.trim()) return;
+    const text = `Based on your Staff PM (T4) role and craft skill gaps in Technology Fluency:\n\n**"Establish AI agent capability framework and lead cross-team adoption, achieving 3+ production deployments by Q4 FY26"**\n\nAligned Craft Skills:\n• Technology Fluency: "Partners with engineering to define technology approaches with AI-first mindset"\n• Product Strategy: "Defines product strategy for offering/capability to drive business growth"\n\nSuggested Key Results:\n1. Complete capability framework documentation by April 15\n2. Deploy 3 AI agents to production by July 31\n3. Achieve 90%+ stakeholder satisfaction on framework usability\n\nThis goal addresses your promotion gap in Technology Fluency while leveraging your strength in Product Execution.`;
+    let i=0; setAiOut('');
+    const iv = setInterval(()=>{setAiOut(text.slice(0,i));i+=4;if(i>text.length){setAiOut(text);clearInterval(iv);}},12);
+  };
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto space-y-5">
+      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Icon name="target" size={22} className="text-[#0077C5]"/> Goals Coach</h1><p className="text-gray-500 text-sm mt-1">AI-powered goal creation, alignment, and progress tracking tied to your craft skills.</p></div>
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="flex items-center gap-2 mb-3"><Icon name="sparkle" size={14} className="text-[#0077C5]"/><h2 className="font-semibold text-sm">Draft a New Goal with AI</h2></div>
+        <div className="flex gap-2">
+          <input type="text" placeholder="Describe what you want to accomplish..." className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#0077C5]/30 focus:border-[#0077C5]" value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleGen()}/>
+          <button className="bg-[#0077C5] text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors flex items-center gap-1.5" onClick={handleGen}><Icon name="sparkle" size={14}/> Generate</button>
+        </div>
+        {aiOut&&<div className="mt-4 p-4 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-100"><div className="flex items-center gap-2 mb-2"><Icon name="lightbulb" size={14} className="text-[#0077C5]"/><p className="text-xs font-semibold text-[#0077C5]">AI-Generated Goal Recommendation</p></div><div className="text-sm text-gray-800 whitespace-pre-line leading-relaxed">{aiOut}</div><div className="flex gap-2 mt-3"><button className="bg-[#0077C5] text-white px-3 py-1.5 rounded-lg text-xs font-medium">Accept & Add</button><button className="bg-white text-gray-700 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300">Refine</button></div></div>}
+      </div>
+      <div>
+        <h2 className="font-semibold text-sm mb-3">Active Goals ({MOCK_GOALS.length})</h2>
+        <div className="space-y-3">
+          {MOCK_GOALS.map(g=>(
+            <div key={g.id} className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex items-start gap-3 cursor-pointer" onClick={()=>setExpanded(expanded===g.id?null:g.id)}>
+                <span className={`mt-0.5 ${g.status==='on_track'?'text-emerald-500':'text-amber-500'}`}><Icon name={g.status==='on_track'?'check':'alert'} size={16}/></span>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between"><h3 className="text-sm font-semibold">{g.title}</h3><Icon name={expanded===g.id?'chevronUp':'chevron'} size={14} className="text-gray-400"/></div>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700">{PILLAR_NAMES[g.pillar]}</span>
+                    <span className="text-xs text-gray-500">Due {g.due}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2"><div className="flex-1 bg-gray-100 rounded-full h-2"><div className={`h-2 rounded-full ${g.status==='at_risk'?'bg-amber-500':'bg-[#0077C5]'}`} style={{width:`${g.progress}%`}}/></div><span className="text-xs font-medium">{g.progress}%</span></div>
+                </div>
+              </div>
+              {expanded===g.id&&<div className="mt-3 pt-3 border-t border-gray-100">
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Key Results</p>
+                {g.krs.map((kr,ki)=><div key={ki} className="flex items-center gap-2 mb-1.5"><div className="flex-1"><p className="text-xs text-gray-700">{kr.l}</p><div className="flex items-center gap-1.5 mt-0.5"><div className="flex-1 bg-gray-100 rounded-full h-1"><div className="bg-[#0077C5]/70 h-1 rounded-full" style={{width:`${kr.p}%`}}/></div><span className="text-[10px] text-gray-500">{kr.p}%</span></div></div></div>)}
+                <div className="mt-3 p-3 rounded-lg bg-blue-50 border border-blue-100"><div className="flex items-start gap-2"><Icon name="sparkle" size={12} className="text-[#0077C5] mt-0.5"/><p className="text-xs text-blue-800"><strong>AI Coach:</strong> {g.status==='at_risk'?'This goal is at risk. Consider breaking it into smaller milestones and requesting resources. Added to your 1:1 agenda.':'Good progress! Add quantitative impact metrics to strengthen craft skills alignment.'}</p></div></div>
+              </div>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============ FEEDBACK COACH ============
+function FeedbackCoach() {
+  const [input, setInput] = useState('');
+  const [aiDraft, setAiDraft] = useState('');
+  const [tab, setTab] = useState('received');
+  const [biasOk, setBiasOk] = useState(false);
+
+  const handleDraft = () => {
+    if(!input.trim())return;
+    const text = `**SBI Model Feedback:**\n\n**Situation:** During Q3 sprint planning last Tuesday...\n\n**Behavior:** You proactively identified the dependency between AI agent framework and onboarding flow, created a detailed spec, and facilitated alignment with both engineering teams within 24 hours.\n\n**Impact:** This prevented a 2-week delay and ensured both teams could work in parallel, directly contributing to hitting our milestone on time.\n\n**Craft Skill:** Demonstrates strong Product Execution — "Facilitates cross functional team using AI as an accelerant."\n\n**Action:** Continue identifying cross-team dependencies early; document your approach as a playbook.`;
+    let i=0;setAiDraft('');const iv=setInterval(()=>{setAiDraft(text.slice(0,i));i+=4;if(i>text.length){setAiDraft(text);clearInterval(iv);}},12);
+  };
+
+  const themes = [{t:'Execution Excellence',c:5,trend:'up',p:'Product Execution'},{t:'Technical Collaboration',c:3,trend:'up',p:'Technology Fluency'},{t:'Stakeholder Communication',c:2,trend:'flat',p:'Org Effectiveness'},{t:'Strategic Thinking',c:2,trend:'up',p:'Product Strategy'}];
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto space-y-5">
+      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Icon name="message" size={22} className="text-emerald-600"/> Feedback Coach</h1><p className="text-gray-500 text-sm mt-1">AI-powered SBI feedback drafting, bias detection, and thematic analysis.</p></div>
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="flex items-center gap-2 mb-3"><Icon name="sparkle" size={14} className="text-emerald-600"/><h2 className="font-semibold text-sm">Draft Feedback with AI</h2></div>
+        <textarea className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 h-20 resize-none" placeholder="Describe what happened and for whom..." value={input} onChange={e=>setInput(e.target.value)}/>
+        <div className="flex gap-2 mt-2">
+          <button className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1.5" onClick={handleDraft}><Icon name="sparkle" size={14}/> Draft with SBI</button>
+          <button className="bg-white text-gray-700 px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 flex items-center gap-1.5" onClick={()=>setBiasOk(true)}><Icon name="shield" size={14}/> Check Bias</button>
+        </div>
+        {biasOk&&<div className="mt-3 p-3 rounded-lg bg-emerald-50 border border-emerald-100"><p className="text-xs font-semibold text-emerald-700 mb-1">Language Audit: All Clear</p><div className="grid grid-cols-2 gap-1">{['Gender-neutral language','Specific evidence cited','Actionable suggestions','Avoids subjective terms'].map((c,i)=><div key={i} className="flex items-center gap-1.5 text-xs text-emerald-700"><Icon name="thumbsUp" size={11}/>{c}</div>)}</div></div>}
+        {aiDraft&&<div className="mt-3 p-4 rounded-lg bg-gradient-to-br from-emerald-50 to-blue-50 border border-emerald-100"><p className="text-xs font-semibold text-emerald-700 mb-2">AI-Generated SBI Feedback</p><div className="text-sm text-gray-800 whitespace-pre-line leading-relaxed">{aiDraft}</div><div className="flex gap-2 mt-3"><button className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1"><Icon name="send" size={11}/> Send</button><button className="bg-white text-gray-700 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300">Refine</button></div></div>}
+      </div>
+      <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 w-fit">{['received','themes'].map(t=><button key={t} onClick={()=>setTab(t)} className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${tab===t?'bg-white text-gray-900 shadow-sm':'text-gray-500'}`}>{t==='received'?'Received':'Themes'}</button>)}</div>
+      {tab==='received'&&<div className="space-y-2">{MOCK_FEEDBACK.map(f=><div key={f.id} className="bg-white rounded-xl border border-gray-200 p-3"><div className="flex items-center justify-between mb-1"><p className="text-sm font-medium">{f.from}</p><span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${f.sentiment==='positive'?'bg-emerald-50 text-emerald-700':'bg-purple-50 text-purple-700'}`}>{f.sentiment}</span></div><p className="text-xs text-gray-600">{f.summary}</p></div>)}</div>}
+      {tab==='themes'&&<div className="bg-white rounded-xl border border-gray-200 p-4"><h3 className="font-semibold text-sm mb-3">Feedback Themes (AI)</h3>{themes.map((t,i)=><div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50 mb-2"><div className="flex-1"><p className="text-sm font-medium">{t.t}</p><p className="text-xs text-gray-500">{t.p} | {t.c} mentions</p></div><span className="flex items-center gap-1 text-xs text-gray-500"><Icon name="trending" size={12} className={t.trend==='up'?'text-emerald-500':'text-gray-400'}/>{t.trend==='up'?'Improving':'Stable'}</span></div>)}<div className="mt-3 p-3 rounded-lg bg-blue-50 border border-blue-100"><div className="flex items-start gap-2"><Icon name="sparkle" size={12} className="text-[#0077C5] mt-0.5"/><p className="text-xs text-blue-800"><strong>AI Summary:</strong> Strongest theme: execution excellence. Growth area: stakeholder communication timing — share design decisions earlier.</p></div></div></div>}
+    </div>
+  );
+}
+
+// ============ CHECK-IN PREP ============
+function CheckInPrep() {
+  const pColor = {high:'border-l-red-400 bg-red-50/50',medium:'border-l-amber-400 bg-amber-50/30',low:'border-l-blue-400 bg-blue-50/30'};
+  const pLabel = {high:'bg-red-50 text-red-700',medium:'bg-amber-50 text-amber-700',low:'bg-blue-50 text-blue-700'};
+  const prompts = ['What support do you need for the data pipeline goal?','How can we align platform strategy with VP priorities?','What feedback from Priya resonated?','Are you getting enough deep work time?'];
+  const followups = [{a:'Share revised data pipeline timeline',o:'Alex',d:'Mar 10'},{a:'Set up sync with Priya on communication cadence',o:'Alex',d:'Mar 7'},{a:'Review platform strategy draft',o:'Sarah',d:'Mar 12'}];
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto space-y-5">
+      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Icon name="calendar" size={22} className="text-purple-600"/> 1:1 Prep Assistant</h1><p className="text-gray-500 text-sm mt-1">AI-generated agenda from goal progress, feedback themes, and risk signals.</p></div>
+      <div className="bg-white rounded-xl border border-purple-200 p-4 bg-gradient-to-r from-purple-50 to-blue-50">
+        <div className="flex items-center justify-between"><div><p className="text-xs text-purple-600 font-semibold uppercase">Next 1:1 with Sarah Kim</p><p className="text-lg font-bold mt-1">Thursday, March 7 at 2:00 PM</p><p className="text-xs text-gray-500 mt-1">30 min | Weekly</p></div><div className="text-right"><span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">In 3 days</span><p className="text-xs text-gray-500 mt-1">Auto-generated agenda</p></div></div>
+      </div>
+      <div className="grid grid-cols-3 gap-5">
+        <div className="col-span-2 space-y-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center gap-2 mb-3"><Icon name="sparkle" size={14} className="text-purple-600"/><h2 className="font-semibold text-sm">AI-Generated Agenda</h2></div>
+            {CHECKIN_TOPICS.map((t,i)=><div key={i} className={`p-3 rounded-lg border-l-4 mb-2 ${pColor[t.priority]}`}><p className="text-sm font-medium">{t.topic}</p><div className="flex items-center gap-2 mt-1"><span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${pLabel[t.priority]}`}>{t.priority}</span><span className="text-[11px] text-gray-500">Source: {t.source}</span></div></div>)}
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <h2 className="font-semibold text-sm mb-3">Action Items</h2>
+            {followups.map((f,i)=><div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 mb-1.5"><input type="checkbox" className="rounded border-gray-300"/><div className="flex-1"><p className="text-sm">{f.a}</p><p className="text-[11px] text-gray-500">{f.o} | Due {f.d}</p></div></div>)}
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center gap-2 mb-3"><Icon name="lightbulb" size={14} className="text-amber-500"/><h3 className="font-semibold text-sm">Coaching Prompts</h3></div>
+            {prompts.map((p,i)=><div key={i} className="p-2 rounded-lg bg-amber-50 border border-amber-100 mb-2"><p className="text-xs text-amber-900">"{p}"</p></div>)}
+          </div>
+          <div className="p-3 rounded-lg bg-purple-50 border border-purple-100"><p className="text-xs text-purple-800"><strong>Explainability:</strong> Agenda generated from 4 goal updates, 4 feedback items, and simulated sprint data. All recommendations are advisory.</p></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============ CRAFT SKILLS ============
+function CraftSkills() {
+  const [level, setLevel] = useState('staff');
+  const [expanded, setExpanded] = useState('product_strategy');
+  const [ratings, setRatings] = useState({});
+  const rLabels = ['Not Demonstrated','Developing','Competent','Proficient','Expert'];
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto space-y-5">
+      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Icon name="layers" size={22} className="text-[#FF6B35]"/> Craft Skills Assessment</h1><p className="text-gray-500 text-sm mt-1">Self-assess against the PM Craft Skills Rubric FY26. Ratings inform goals, promo readiness, and development plans.</p></div>
+      <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4">
+        <label className="text-sm font-medium">Assessing for:</label>
+        <select className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm" value={level} onChange={e=>setLevel(e.target.value)}>{LEVELS.map(l=><option key={l.id} value={l.id}>{l.label}</option>)}</select>
+      </div>
+      <div className="grid grid-cols-4 gap-3">
+        {CRAFT_PILLARS.map(p=>{const a=SKILL_ASSESSMENT[p.id];const gap=a.target-a.self;return(
+          <div key={p.id} className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center gap-2 mb-2"><div className="w-3 h-3 rounded-full" style={{backgroundColor:p.color}}/><p className="text-xs font-semibold">{p.name}</p></div>
+            <div className="flex items-end gap-1"><span className="text-2xl font-bold">{a.self}</span><span className="text-xs text-gray-500 mb-1">/ 5.0</span></div>
+            <div className="flex items-center gap-2 mt-1"><span className="text-xs text-gray-500">Target: {a.target}</span>{gap>0?<span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700">Gap: {gap.toFixed(1)}</span>:<span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700">At target</span>}</div>
+            <div className="w-full bg-gray-100 rounded-full h-2 mt-2"><div className="h-2 rounded-full" style={{width:`${(a.self/5)*100}%`,backgroundColor:p.color}}/></div>
+          </div>
+        )})}
+      </div>
+      <div className="space-y-3">
+        {CRAFT_PILLARS.map(p=>{const isExp=expanded===p.id;const skills=p.levels[level]||[];return(
+          <div key={p.id} className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between cursor-pointer" onClick={()=>setExpanded(isExp?null:p.id)}>
+              <div className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{backgroundColor:`${p.color}15`}}><div className="w-3.5 h-3.5 rounded-full" style={{backgroundColor:p.color}}/></div><div><h3 className="font-semibold text-sm">{p.name}</h3><p className="text-xs text-gray-500">{skills.length} skills at this level</p></div></div>
+              <Icon name={isExp?'chevronUp':'chevron'} size={14} className="text-gray-400"/>
+            </div>
+            {isExp&&<div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
+              {skills.map((s,si)=>{const r=ratings[`${p.id}_${si}`];return(
+                <div key={si} className="p-3 rounded-lg bg-gray-50">
+                  <div className="flex items-start gap-2"><span className={r?'text-emerald-500':'text-gray-300'}><Icon name={r?'check':'circle'} size={14}/></span><div className="flex-1"><p className="text-sm text-gray-800">{s}</p><div className="flex items-center gap-1 mt-2 flex-wrap">{rLabels.map((l,ri)=><button key={ri} onClick={()=>setRatings(prev=>({...prev,[`${p.id}_${si}`]:ri+1}))} className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${r===ri+1?'text-white shadow-sm':'bg-gray-100 text-gray-500 hover:bg-gray-200'}`} style={r===ri+1?{backgroundColor:p.color}:{}}>{l}</button>)}</div></div></div>
+                </div>
+              )})}
+              <div className="p-3 rounded-lg bg-blue-50 border border-blue-100"><div className="flex items-start gap-2"><Icon name="sparkle" size={12} className="text-[#0077C5] mt-0.5"/><p className="text-xs text-blue-800"><strong>AI Insight:</strong> Based on self-assessment and feedback, strongest area in {p.name} is execution velocity. Focus development on cross-team influence for Senior Staff PM.</p></div></div>
+            </div>}
+          </div>
+        )})}
+      </div>
+    </div>
+  );
+}
+
+// ============ PROMOTION READINESS ============
+function Promotion() {
+  const [showNarr, setShowNarr] = useState(false);
+  const dem = RUBRIC_MATCH.filter(r=>r.demonstrated===true).length;
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto space-y-5">
+      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Icon name="award" size={22} className="text-pink-600"/> Promotion Readiness</h1><p className="text-gray-500 text-sm mt-1">AI-assembled evidence mapped to craft skills rubric for your next-level case.</p></div>
+      <div className="bg-white rounded-xl border border-pink-200 p-4 bg-gradient-to-r from-pink-50 to-purple-50">
+        <div className="flex items-center justify-between">
+          <div><p className="text-xs text-pink-600 font-semibold uppercase">Readiness for Senior Staff PM (T5)</p><div className="flex items-end gap-2 mt-1"><span className="text-4xl font-bold">68%</span><span className="text-sm text-gray-500 mb-1">overall</span></div><p className="text-xs text-gray-600 mt-1">{dem}/{RUBRIC_MATCH.length} rubric skills demonstrated | {PROMO_EVIDENCE.length} evidence items</p></div>
+          <div className="relative w-20 h-20"><svg className="w-20 h-20 -rotate-90" viewBox="0 0 36 36"><path d="M18 2.0845a15.9155 15.9155 0 010 31.831 15.9155 15.9155 0 010-31.831" fill="none" stroke="#e5e7eb" strokeWidth="3"/><path d="M18 2.0845a15.9155 15.9155 0 010 31.831 15.9155 15.9155 0 010-31.831" fill="none" stroke="#EC4899" strokeWidth="3" strokeDasharray="68,100"/></svg><span className="absolute inset-0 flex items-center justify-center text-lg font-bold">68%</span></div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-5">
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="font-semibold text-sm mb-3 flex items-center gap-2"><span className="text-emerald-500"><Icon name="check" size={14}/></span> Strengths</h3>
+          {[{p:'Product Execution',e:'Led 3 major launches in FY26',s:85},{p:'Product Strategy',e:'Defined 3-year platform strategy',s:72}].map((x,i)=><div key={i} className="p-3 rounded-lg bg-emerald-50 mb-2"><div className="flex items-center justify-between mb-1"><p className="text-sm font-medium text-emerald-900">{x.p}</p><span className="text-xs font-bold text-emerald-700">{x.s}%</span></div><p className="text-xs text-emerald-700">{x.e}</p><div className="w-full bg-emerald-100 rounded-full h-1.5 mt-1.5"><div className="bg-emerald-500 h-1.5 rounded-full" style={{width:`${x.s}%`}}/></div></div>)}
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="font-semibold text-sm mb-3 flex items-center gap-2"><span className="text-amber-500"><Icon name="alert" size={14}/></span> Areas to Develop</h3>
+          {[{p:'Org Effectiveness',e:'Need more cross-team influence examples',s:55},{p:'Technology Fluency',e:'Need AI evangelism across portfolio',s:48}].map((x,i)=><div key={i} className="p-3 rounded-lg bg-amber-50 mb-2"><div className="flex items-center justify-between mb-1"><p className="text-sm font-medium text-amber-900">{x.p}</p><span className="text-xs font-bold text-amber-700">{x.s}%</span></div><p className="text-xs text-amber-700">{x.e}</p><div className="w-full bg-amber-100 rounded-full h-1.5 mt-1.5"><div className="bg-amber-500 h-1.5 rounded-full" style={{width:`${x.s}%`}}/></div></div>)}
+        </div>
+      </div>
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="flex items-center justify-between mb-3"><h3 className="font-semibold text-sm">Evidence Portfolio (Auto-Collected)</h3><span className="inline-flex px-2.5 py-1 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700"><Icon name="sparkle" size={10}/> AI Assembled</span></div>
+        {PROMO_EVIDENCE.map((e,i)=><div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50 mb-1.5"><div className="flex-1 min-w-0"><p className="text-sm font-medium">{e.title}</p><p className="text-xs text-gray-500">{e.date} | {e.impact}</p></div><span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700">{e.pillar}</span><div className="w-12 bg-gray-200 rounded-full h-1.5"><div className="bg-pink-500 h-1.5 rounded-full" style={{width:`${e.score}%`}}/></div></div>)}
+      </div>
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="flex items-center justify-between mb-3"><h3 className="font-semibold text-sm">Rubric Mapping: Senior Staff PM (T5)</h3><button onClick={()=>setShowNarr(!showNarr)} className="bg-white text-gray-700 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300 flex items-center gap-1"><Icon name="file" size={11}/> {showNarr?'Hide':'Generate'} Narrative</button></div>
+        {RUBRIC_MATCH.map((r,i)=><div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 mb-1.5"><span className={r.demonstrated===true?'text-emerald-500':r.demonstrated==='partial'?'text-amber-500':'text-red-400'}><Icon name={r.demonstrated===true?'check':'alert'} size={14}/></span><div className="flex-1"><p className="text-sm">{r.skill}</p><p className="text-[11px] text-gray-500">Evidence: {r.evidence}</p></div></div>)}
+        {showNarr&&<div className="mt-3 p-4 rounded-lg bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-100"><div className="flex items-center gap-2 mb-2"><Icon name="sparkle" size={12} className="text-pink-600"/><p className="text-xs font-semibold text-pink-700">AI-Generated Promotion Narrative</p></div><p className="text-sm text-gray-800 leading-relaxed">Alex has demonstrated consistent Senior Staff PM capabilities across Product Execution and Strategy. Key highlights include leading the SMB AI Onboarding launch (35% time-to-value reduction for 50K users) and authoring the VP-approved 3-Year AI Platform Strategy. Areas for development: cross-BU influence in Org Effectiveness and AI evangelism in Technology Fluency. Recommended: lead a cross-BU architecture review and present at PM All-Hands.</p><div className="flex gap-2 mt-3"><button className="bg-pink-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium">Export Package</button><button className="bg-white text-gray-700 px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300">Refine</button></div></div>}
+      </div>
+    </div>
+  );
+}
+
+// ============ DEVELOPMENT PLANNER ============
+function DevPlan() {
+  const [selPath, setSelPath] = useState(0);
+  const paths = [{t:'Senior Staff PM (T5)',tl:'12-18 months',r:68,f:['Org Effectiveness','Tech Fluency']},{t:'Principal PM (T6)',tl:'24-36 months',r:35,f:['Strategic Leadership','Cross-BU Influence']},{t:'Manager 3 (M3)',tl:'18-24 months',r:42,f:['People Management','Team Building']}];
+  const milestones = [{l:'Complete AI Strategy Masterclass',d:'Mar 2026',done:true},{l:'Lead cross-BU architecture review',d:'Apr 2026',done:false},{l:'Present at PM All-Hands on AI',d:'May 2026',done:false},{l:'VP mentor relationship established',d:'Mar 2026',done:true},{l:'Ship 2nd launch with P&L metrics',d:'Jun 2026',done:false},{l:'3+ peer feedback on cross-team influence',d:'Jul 2026',done:false}];
+  const typeC = {course:'bg-blue-100 text-[#0077C5]',stretch:'bg-purple-100 text-purple-600',mentor:'bg-emerald-100 text-emerald-600',project:'bg-amber-100 text-amber-600'};
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto space-y-5">
+      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Icon name="trending" size={22} className="text-teal-600"/> Development Planner</h1><p className="text-gray-500 text-sm mt-1">AI-personalized learning, stretch opportunities, and career simulations.</p></div>
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="flex items-center gap-2 mb-3"><Icon name="sparkle" size={14} className="text-teal-600"/><h2 className="font-semibold text-sm">Career Path Simulation</h2></div>
+        <div className="grid grid-cols-3 gap-3">{paths.map((p,i)=><div key={i} onClick={()=>setSelPath(i)} className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${selPath===i?'border-teal-500 bg-teal-50':'border-gray-200 hover:border-gray-300'}`}><h3 className="font-semibold text-sm">{p.t}</h3><p className="text-xs text-gray-500 mt-1">{p.tl}</p><div className="flex items-center gap-2 mt-2"><div className="flex-1 bg-gray-200 rounded-full h-2"><div className="bg-teal-500 h-2 rounded-full" style={{width:`${p.r}%`}}/></div><span className="text-xs font-bold">{p.r}%</span></div><div className="flex flex-wrap gap-1 mt-2">{p.f.map((f,fi)=><span key={fi} className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700">{f}</span>)}</div></div>)}</div>
+      </div>
+      <div className="grid grid-cols-2 gap-5">
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h2 className="font-semibold text-sm mb-3">AI Recommendations</h2>
+          {DEV_RECS.map((r,i)=><div key={i} className="flex items-start gap-3 p-2.5 rounded-lg bg-gray-50 mb-2"><div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${typeC[r.type]}`}><Icon name={r.type==='course'?'book':r.type==='mentor'?'user':'briefcase'} size={14}/></div><div className="flex-1"><p className="text-sm font-medium">{r.title}</p>{r.provider&&<p className="text-[11px] text-gray-400">{r.provider}</p>}</div><span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${r.priority==='high'?'bg-red-50 text-red-700':r.priority==='medium'?'bg-amber-50 text-amber-700':'bg-blue-50 text-blue-700'}`}>{r.priority}</span></div>)}
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h2 className="font-semibold text-sm mb-3">Milestones</h2>
+          {milestones.map((m,i)=><div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 mb-1.5"><span className={m.done?'text-emerald-500':'text-gray-300'}><Icon name={m.done?'check':'circle'} size={14}/></span><div className="flex-1"><p className={`text-sm ${m.done?'text-gray-500 line-through':''}`}>{m.l}</p><p className="text-[10px] text-gray-400">Target: {m.d}</p></div></div>)}
+          <div className="mt-3 p-3 rounded-lg bg-teal-50 border border-teal-100"><div className="flex items-start gap-2"><Icon name="sparkle" size={12} className="text-teal-600 mt-0.5"/><p className="text-xs text-teal-800"><strong>AI:</strong> You're 2 milestones ahead of typical trajectory. Focus on cross-team influence to go from 68% to ~80% readiness.</p></div></div>
+        </div>
+      </div>
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <h2 className="font-semibold text-sm mb-3">Skill Gap Bridge: Current → {paths[selPath].t}</h2>
+        {[{s:'Org Effectiveness',c:3.5,t:4.2,g:'Cross-team strategic influence'},{s:'Technology Fluency',c:3.2,t:4.0,g:'AI evangelism and portfolio-level tech decisions'},{s:'Product Strategy',c:3.5,t:4.0,g:'Business outcome objectives tied to P&L'},{s:'Product Execution',c:4.0,t:4.2,g:'Minor — continue current trajectory'}].map((x,i)=><div key={i} className="flex items-center gap-3 mb-2"><div className="w-32 text-sm font-medium">{x.s}</div><div className="flex-1 relative"><div className="bg-gray-100 rounded-full h-3"><div className="bg-teal-400 h-3 rounded-full relative" style={{width:`${(x.c/5)*100}%`}}><span className="absolute right-1 top-0 text-[8px] font-bold text-white leading-3">{x.c}</span></div></div><div className="absolute top-0 h-3 border-r-2 border-dashed border-pink-400" style={{left:`${(x.t/5)*100}%`}}/></div><div className="w-8 text-xs text-gray-500 text-right">{x.t}</div><span className="text-gray-400"><Icon name="arrow" size={12}/></span><div className="w-48 text-xs text-gray-500">{x.g}</div></div>)}
+      </div>
+    </div>
+  );
+}
+
+// ============ AGENT CHAT ============
+function AgentChat({ persona }) {
+  const [open, setOpen] = useState(false);
+  const [minimized, setMinimized] = useState(false);
+  const [messages, setMessages] = useState([{role:'assistant',content:persona==='employee'?"Hi Alex! I'm your PM&D Growth Agent. I can help with goals, feedback, 1:1 prep, craft skills, promotion readiness, and development. What would you like?":"Welcome! I'm your Manager Assist co-pilot. I can help with team synthesis, 1:1 prep, feedback drafting, and risk detection."}]);
+  const [input, setInput] = useState('');
+  const [typing, setTyping] = useState(false);
+  const endRef = useRef(null);
+
+  useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'});},[messages,typing]);
+
+  const responses = {
+    goal: "**4 Active Goals** — 3 on track, 1 at risk.\n\nThe data pipeline goal is at 38%. Recommend:\n1. Break into smaller milestones\n2. Discuss resources in your 1:1\n3. Connect with platform team\n\nAdded to your 1:1 agenda.",
+    feedback: "**Key Feedback Themes:**\n\nStrengths: Execution velocity (5 mentions)\nGrowth: Stakeholder communication timing\n\nWant me to draft a response or action plan?",
+    promo: "**Promo Readiness: 68% for T5**\n\nStrong: Product Execution (85%), Strategy (72%)\nGaps: Org Effectiveness (55%), Tech Fluency (48%)\n\nRecommend: Lead Q3 cross-BU review.",
+    default: "I can help with:\n- Draft goals aligned to craft skills\n- SBI feedback with bias detection\n- 1:1 prep from performance data\n- Promotion readiness assessment\n- Development plans\n\nWhat would you like to explore?"
+  };
+
+  const send = () => {
+    if (!input.trim()) return;
+    setMessages(prev=>[...prev,{role:'user',content:input}]);
+    const q=input.toLowerCase(); setInput(''); setTyping(true);
+    setTimeout(()=>{
+      const r = q.includes('goal')||q.includes('objective')?responses.goal:q.includes('feedback')||q.includes('review')?responses.feedback:q.includes('promo')||q.includes('ready')||q.includes('next level')?responses.promo:responses.default;
+      setTyping(false); setMessages(prev=>[...prev,{role:'assistant',content:r}]);
+    },1000);
+  };
+
+  if (!open) return <button onClick={()=>setOpen(true)} className="fixed bottom-5 right-5 w-12 h-12 rounded-full bg-[#0077C5] text-white shadow-lg flex items-center justify-center hover:bg-blue-700 transition-all hover:scale-105 z-50"><Icon name="bot" size={22}/></button>;
+
+  return (
+    <div className={`fixed right-5 bottom-5 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col z-50 transition-all ${minimized?'w-72 h-12':'w-80 h-[460px]'}`}>
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100 bg-[#0D2B4E] rounded-t-2xl">
+        <div className="flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-[#0077C5] flex items-center justify-center"><Icon name="bot" size={13} className="text-white"/></div><div><p className="text-white text-xs font-semibold">PM&D Agent</p><p className="text-blue-300 text-[9px]">{persona==='employee'?'Employee Assist':'Manager Assist'}</p></div></div>
+        <div className="flex items-center gap-0.5"><button onClick={()=>setMinimized(!minimized)} className="p-1 text-blue-300 hover:text-white"><span className="text-sm">{minimized?'□':'—'}</span></button><button onClick={()=>setOpen(false)} className="p-1 text-blue-300 hover:text-white"><Icon name="x" size={13}/></button></div>
+      </div>
+      {!minimized&&<>
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {messages.map((m,i)=><div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed ${m.role==='user'?'bg-[#0077C5] text-white rounded-br-sm':'bg-gray-100 text-gray-800 rounded-bl-sm'}`}><div className="whitespace-pre-line">{m.content}</div></div></div>)}
+          {typing&&<div className="flex justify-start"><div className="bg-gray-100 px-3 py-2 rounded-xl rounded-bl-sm flex gap-1">{[0,1,2].map(d=><span key={d} className="w-1.5 h-1.5 bg-gray-400 rounded-full typing-dot"/>)}</div></div>}
+          <div ref={endRef}/>
+        </div>
+        <div className="px-2 pb-1.5 flex gap-1 flex-wrap">{['My goals','Feedback themes','Promo readiness'].map(q=><button key={q} onClick={()=>setInput(q)} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 hover:bg-gray-200">{q}</button>)}</div>
+        <div className="p-2 border-t border-gray-100"><div className="flex gap-1.5"><input type="text" placeholder="Ask your PM&D Agent..." className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()}/><button onClick={send} className="w-7 h-7 rounded-lg bg-[#0077C5] text-white flex items-center justify-center hover:bg-blue-700"><Icon name="send" size={13}/></button></div></div>
+      </>}
+    </div>
+  );
+}
+
+// ============ APP ============
+function App() {
+  const [page, setPage] = useState('dashboard');
+  const [persona, setPersona] = useState('employee');
+
+  const pages = {
+    dashboard: <Dashboard persona={persona}/>,
+    goals: <GoalsCoach/>,
+    feedback: <FeedbackCoach/>,
+    checkin: <CheckInPrep/>,
+    skills: <CraftSkills/>,
+    promotion: <Promotion/>,
+    development: <DevPlan/>,
+  };
+
+  return (
+    <div className="flex h-screen overflow-hidden bg-gray-50">
+      <Sidebar page={page} setPage={setPage} persona={persona} setPersona={setPersona}/>
+      <main className="flex-1 overflow-y-auto">{pages[page]}</main>
+      <AgentChat persona={persona}/>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
