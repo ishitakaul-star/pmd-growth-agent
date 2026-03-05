@@ -328,6 +328,47 @@ ${(me.strengths||[]).map(s=>`- ${s}`).join('\n')}`;
 ### Growth Areas
 ${(me.areasToGrow||[]).map(g=>`- ${g}`).join('\n')}`;
     }
+    if (lq.includes('promo') || lq.includes('readiness') || lq.includes('ready')) {
+      const isIshita = me.name === DEFAULT_ME.name;
+      if (isIshita) {
+        return `## Promotion Readiness — 95%
+**${me.role} → ${me.target}**
+
+### Product Strategy — 97%
+- Enterprise Vision V2.0 authored & presented
+- Workforce Transformation / Superagency paper authored
+- 5 strategic pillars defined, FY26-28 roadmap
+- *Remaining*: Cross-BU strategy adoption — present beyond T4i
+
+### Product Execution — 96%
+- 7+ concurrent programs driven simultaneously
+- Promo Tool launched Mar 2 with GenAI
+- DNME Portal: >50% task completion week one
+- CK Avature Mar 30 cutover confirmed
+- *Remaining*: Quantified $ impact narratives across all pillars
+
+### Technology Fluency — 92%
+- GenAI integration — Promo Tool + RAI/security approval
+- ServiceNow Now Assist Dynamic Sensitivity Routing
+- AI-Enabled Superagency frameworks (CVI, ACE, Flash Talent)
+- *Remaining*: Present AI patterns at company-wide forum; publish AI POV
+
+### Org Effectiveness — 93%
+- 7 PMs + 2 supporting across 5 domains
+- Expanded to own ALL HR Product Tech for T4i
+- Cross-functional execution across 5 platforms
+- *Remaining*: Visible cross-BU influence outside T4i
+
+> Switch to the **Promo** tab for the full visual tracker`;
+      }
+      return `## Promotion Readiness
+**${me.role} → ${me.target||'Next Level'}**
+
+Based on your profile, assess yourself across the 4 craft skill pillars:
+${(me.craftPillars||['Product Strategy','Product Execution','Technology Fluency','Org Effectiveness']).map(p=>`- **${p}**: What evidence do you have?`).join('\n')}
+
+Add more context (goals, wins, strategy docs) to get a richer assessment.`;
+    }
     if (lq.includes('vision') || lq.includes('strategy') || lq.includes('paper') || lq.includes('author') || lq.includes('wrote')) {
       const papers = me.wins?.filter(w => w.toLowerCase().includes('author') || w.toLowerCase().includes('vision') || w.toLowerCase().includes('strategy paper'));
       return papers?.length
@@ -763,32 +804,83 @@ function PromoTracker({me, team}) {
     ]},
   ];
 
+  const totalDone = milestones.reduce((a,m)=>a+m.items.filter(x=>x.done).length,0);
+  const totalItems = milestones.reduce((a,m)=>a+m.items.length,0);
+  const totalRemaining = totalItems - totalDone;
+
   return (
     <div className="fade-up pt-4 px-1 space-y-4 pb-8">
-      {/* Overall ring */}
+      {/* Dashboard header */}
       <div className="glass rounded-2xl p-5">
         <div className="flex items-center gap-5">
           <div className="relative flex-shrink-0">
-            <svg width="90" height="90" viewBox="0 0 90 90">
-              <circle cx="45" cy="45" r="38" fill="none" stroke="#1E293B" strokeWidth="7"/>
-              <circle cx="45" cy="45" r="38" fill="none" stroke="#365EDC" strokeWidth="7"
-                strokeDasharray={`${2*Math.PI*38*overall/100} ${2*Math.PI*38*(1-overall/100)}`}
-                strokeDashoffset={2*Math.PI*38*0.25}
+            <svg width="100" height="100" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#1E293B" strokeWidth="8"/>
+              <circle cx="50" cy="50" r="42" fill="none" stroke="url(#grad)" strokeWidth="8"
+                strokeDasharray={`${2*Math.PI*42*overall/100} ${2*Math.PI*42*(1-overall/100)}`}
+                strokeDashoffset={2*Math.PI*42*0.25}
                 strokeLinecap="round" className="transition-all duration-1000"/>
+              <defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#365EDC"/><stop offset="100%" stopColor="#10B981"/></linearGradient></defs>
             </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xl font-bold text-white">{overall}%</span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold text-white">{overall}%</span>
+              <span className="text-[9px] text-slate-400 uppercase tracking-wider">Ready</span>
             </div>
           </div>
-          <div>
-            <h2 className="text-base font-semibold text-white">Promo Readiness</h2>
+          <div className="flex-1">
+            <h2 className="text-base font-semibold text-white">Promotion Dashboard</h2>
             <p className="text-xs text-slate-400 mt-0.5">{me.role} → {me.target}</p>
-            <p className="text-[11px] text-mint-400 mt-1.5 font-medium">Almost there — close remaining gaps to lock it in</p>
+            <div className="flex gap-3 mt-3">
+              <div className="flex items-center gap-1.5"><div className="w-5 h-5 rounded-md bg-mint-400/20 flex items-center justify-center"><span className="text-[10px] font-bold text-mint-400">{totalDone}</span></div><span className="text-[10px] text-slate-400">Done</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-5 h-5 rounded-md bg-amber-400/20 flex items-center justify-center"><span className="text-[10px] font-bold text-amber-400">{totalRemaining}</span></div><span className="text-[10px] text-slate-400">Remaining</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-5 h-5 rounded-md bg-brand-400/20 flex items-center justify-center"><span className="text-[10px] font-bold text-brand-300">4</span></div><span className="text-[10px] text-slate-400">Pillars</span></div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Pillar cards */}
+      {/* Mini pillar summary row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {milestones.map((m,i) => (
+          <div key={i} className="glass rounded-xl p-3 text-center">
+            <div className="w-2 h-2 rounded-full mx-auto mb-1.5" style={{backgroundColor:m.color}}/>
+            <span className="text-lg font-bold text-white">{m.pct}%</span>
+            <p className="text-[10px] text-slate-400 mt-0.5">{m.label}</p>
+            <div className="h-1 rounded-full bg-slate-800 mt-2">
+              <div className="h-full rounded-full" style={{width:`${m.pct}%`, backgroundColor:m.color}}/>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Pizza tracker steps */}
+      <div className="glass rounded-xl p-4">
+        <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" stroke="#10B981" strokeWidth="2" strokeLinecap="round"/></svg>
+          Progress Tracker
+        </h3>
+        {/* Horizontal tracker line */}
+        <div className="relative">
+          <div className="flex items-center justify-between mb-6">
+            {['Evidence\nBuilt','Strategy\nAuthored','Execution\nProven','Tech\nDemonstrated','Cross-BU\nInfluence'].map((step,i) => {
+              const done = i < 4;
+              return (
+                <div key={i} className="flex flex-col items-center z-10" style={{width:'20%'}}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${done?'bg-mint-400 text-brand-900':'bg-slate-700 text-slate-400 border-2 border-dashed border-slate-600'}`}>
+                    {done ? <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/></svg> : i+1}
+                  </div>
+                  <span className="text-[9px] text-slate-400 mt-1.5 text-center whitespace-pre-line leading-tight">{step}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="absolute top-4 left-[10%] right-[10%] h-0.5 bg-slate-700 -z-0">
+            <div className="h-full bg-mint-400 rounded-full" style={{width:'80%'}}/>
+          </div>
+        </div>
+      </div>
+
+      {/* Detailed pillar cards */}
       {milestones.map((m,i) => {
         const done = m.items.filter(x=>x.done).length;
         const total = m.items.length;
@@ -804,11 +896,9 @@ function PromoTracker({me, team}) {
                 <span className="text-xs font-bold" style={{color:m.color}}>{m.pct}%</span>
               </div>
             </div>
-            {/* Progress bar */}
             <div className="h-1.5 rounded-full bg-slate-800 mb-3">
               <div className="h-full rounded-full transition-all duration-700" style={{width:`${m.pct}%`, backgroundColor:m.color}}/>
             </div>
-            {/* Items */}
             <div className="space-y-1.5">
               {m.items.map((item,j) => (
                 <div key={j} className="flex items-start gap-2">
@@ -816,7 +906,7 @@ function PromoTracker({me, team}) {
                     ? <svg className="flex-shrink-0 mt-0.5" width="14" height="14" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill={m.color} opacity="0.2"/><path d="M9 12l2 2 4-4" stroke={m.color} strokeWidth="2" strokeLinecap="round"/></svg>
                     : <svg className="flex-shrink-0 mt-0.5 text-slate-600" width="14" height="14" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5"/></svg>
                   }
-                  <span className={`text-[12px] leading-relaxed ${item.done?'text-slate-300':'text-slate-500'}`}>{item.t}</span>
+                  <span className={`text-[12px] leading-relaxed ${item.done?'text-slate-300':'text-amber-400/80 font-medium'}`}>{item.t}</span>
                 </div>
               ))}
             </div>
@@ -826,7 +916,10 @@ function PromoTracker({me, team}) {
 
       {/* What's left */}
       <div className="glass rounded-xl p-4 border-l-2 border-amber-400">
-        <h3 className="text-sm font-semibold text-white mb-2">To reach 100%</h3>
+        <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="#FBBF24" strokeWidth="2" strokeLinejoin="round"/></svg>
+          To reach 100%
+        </h3>
         <div className="space-y-1.5 text-[12px] text-slate-300">
           <p>1. <strong className="text-white">Cross-BU visibility</strong> — present Enterprise Vision or Superagency frameworks to audiences outside T4i</p>
           <p>2. <strong className="text-white">Quantified impact</strong> — build $ and efficiency metrics across all pillars (ServiceNow ROI, CK cost avoidance, TA consolidation savings)</p>
@@ -878,9 +971,22 @@ function App() {
 
   if (!ready) return <Setup onDone={p=>{ if(p)setMe(p); else setMe(DEFAULT_ME); setReady(true); }} />;
 
+  const IC = {
+    goals:<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="#365EDC" strokeWidth="2"/><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z" stroke="#365EDC" strokeWidth="2"/><circle cx="12" cy="12" r="2" fill="#365EDC"/></svg>,
+    outcomes:<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="#10B981" strokeWidth="2" strokeLinecap="round"/><path d="M22 4 12 14.01l-3-3" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    craft:<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" stroke="#F59E0B" strokeWidth="2"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" stroke="#F59E0B" strokeWidth="2"/></svg>,
+    dev:<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6" stroke="#FB7185" strokeWidth="2" strokeLinecap="round"/></svg>,
+    strategy:<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#93C5FD" strokeWidth="2"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="#93C5FD" strokeWidth="2" strokeLinecap="round"/></svg>,
+    promo:<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="#FBBF24" strokeWidth="2" strokeLinejoin="round"/></svg>,
+    strengths:<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" stroke="#34D399" strokeWidth="2"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0" stroke="#34D399" strokeWidth="2" strokeLinecap="round"/></svg>,
+    team:<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#365EDC" strokeWidth="2"/><circle cx="9" cy="7" r="4" stroke="#365EDC" strokeWidth="2"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#365EDC" strokeWidth="2"/></svg>,
+    risk:<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke="#FB7185" strokeWidth="2"/><path d="M12 9v4M12 17h.01" stroke="#FB7185" strokeWidth="2" strokeLinecap="round"/></svg>,
+    feedback:<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#93C5FD" strokeWidth="2"/></svg>,
+  };
+
   const eg = mode==='employee'
-    ? [{l:'My Goals',p:'Show my goals'},{l:'Outcomes',p:'What have I delivered?'},{l:'Craft Skills',p:'Assess my craft skills'},{l:'Development',p:'Where should I invest?'},{l:'Strategy Work',p:'My authored work'}]
-    : [{l:'Team Status',p:'Team overview'},{l:'Risks',p:'Show risks'},{l:'Promo Targets',p:'Promo targets'},{l:'Feedback',p:'Help draft feedback'},{l:'Development',p:'Development priorities'}];
+    ? [{l:'My Goals',p:'Show my goals',ic:'goals',sub:'Objectives & progress'},{l:'Outcomes',p:'What have I delivered?',ic:'outcomes',sub:'Impact & wins'},{l:'Craft Skills',p:'Assess my craft skills',ic:'craft',sub:'PM rubric FY26'},{l:'Development',p:'Where should I invest?',ic:'dev',sub:'Growth recs by pillar'},{l:'Strategy Work',p:'My authored work',ic:'strategy',sub:'Papers & artifacts'},{l:'Promotion Readiness',p:'Promo readiness',ic:'promo',sub:'Track to next level'},{l:'Strengths',p:'What are my strengths?',ic:'strengths',sub:'Outcome-backed'}]
+    : [{l:'Team Status',p:'Team overview',ic:'team',sub:'All PMs at a glance'},{l:'Risks',p:'Show risks',ic:'risk',sub:'Prioritized blockers'},{l:'Promo Targets',p:'Promo targets',ic:'promo',sub:'Team progression'},{l:'Feedback',p:'Help draft feedback',ic:'feedback',sub:'SBI framework'},{l:'Development',p:'Development priorities',ic:'dev',sub:'Coaching by craft skill'}];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -944,9 +1050,13 @@ function App() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-w-xl mx-auto">
-              {eg.map((g,i)=>(<button key={i} onClick={()=>send(g.p)} className="card-hover glass rounded-lg px-3 py-2.5 text-left">
-                <span className="text-xs font-medium text-slate-200">{g.l}</span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-w-2xl mx-auto">
+              {eg.map((g,i)=>(<button key={i} onClick={()=>g.ic==='promo'&&mode==='employee'?go('promo'):send(g.p)} className="card-hover glass rounded-xl px-3.5 py-3 text-left flex items-start gap-2.5">
+                <div className="mt-0.5 flex-shrink-0">{IC[g.ic]}</div>
+                <div>
+                  <span className="text-xs font-semibold text-white block">{g.l}</span>
+                  <span className="text-[10px] text-slate-500 leading-tight">{g.sub}</span>
+                </div>
               </button>))}
             </div>
           </div>
