@@ -11,7 +11,7 @@
         extend: {
           colors: {
             brand: { 50:'#F0F7FF', 100:'#E1EFFF', 200:'#C3DFFF', 300:'#93C5FD', 400:'#365EDC', 500:'#0077C5', 600:'#0065A9', 700:'#004D80', 800:'#1A2744', 900:'#0D1B2A' },
-            mint: { 50:'#ECFDF5', 100:'#D1FAE5', 400:'#34D399', 500:'#10B981' },
+            mint: { 50:'#ECFDF5', 400:'#34D399', 500:'#10B981' },
             amber: { 50:'#FFFBEB', 400:'#FBBF24', 500:'#F59E0B' },
             rose: { 50:'#FFF1F2', 400:'#FB7185', 500:'#F43F5E' },
             slate: { 50:'#F8FAFC', 100:'#F1F5F9', 200:'#E2E8F0', 300:'#CBD5E1', 400:'#94A3B8', 500:'#64748B', 600:'#475569', 700:'#334155', 800:'#1E293B', 900:'#0F172A' }
@@ -34,7 +34,6 @@
     .typing-dot { animation: pulse-dot 1.2s infinite; }
     .typing-dot:nth-child(2) { animation-delay:.2s; }
     .typing-dot:nth-child(3) { animation-delay:.4s; }
-    @keyframes shimmer { from{background-position:200% 0} to{background-position:-200% 0} }
     .msg-enter { animation: fadeUp 0.25s ease-out both; }
     ::-webkit-scrollbar { width:5px; }
     ::-webkit-scrollbar-track { background:transparent; }
@@ -42,489 +41,375 @@
     .card-hover { transition: all 0.2s ease; }
     .card-hover:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); border-color: #365EDC; }
     .glass { background: rgba(26,39,68,0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
-    input::placeholder { color: #64748B; }
+    input::placeholder, textarea::placeholder { color: #64748B; }
   </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const {useState, useRef, useEffect, useCallback} = React;
+const {useState, useRef, useEffect} = React;
 
-/* ── DEFAULT DATA (Ishita's real profile) ── */
+/* ═══ ISHITA'S DEFAULT DATA ═══ */
 const DEFAULT_ME = {
   name:'Ishita Kaul', role:'Group Product Manager',
   org:'People & Places Technology (T4i) — All HR Product Tech',
   target:'Director, Product Management',
-  promoReadiness:76,
-  skills:{
-    'Product Strategy':{self:4.3,target:4.8,note:'Authored Enterprise Vision Strategy for unified intelligent workforce platform; defined 5 strategic pillars, federated build model, and multi-year roadmap (FY26-FY28). Authored Workforce Transformation through AI-Enabled Superagency — original frameworks for CVI, Flash Talent Assembly, ACE, and Cognitive Readiness Orchestration.'},
-    'Product Execution':{self:4.1,target:4.5,note:'Driving execution across 7+ concurrent programs: ServiceNow HRSD (Jun 8 go-live), CK Integration (Mar 30 + Aug 1), Avature post-implementation, Workday platform, Expert Hiring, Learning platforms. Managing complex cross-functional dependencies.'},
-    'Technology Fluency':{self:3.8,target:4.5,note:'Deep understanding of enterprise architecture: Workday, ServiceNow, Avature, Docebo, AI/ML integration patterns, MCP/A2A protocols. However, Director bar requires enterprise-level AI advocacy — presenting at company-wide forums, publishing AI POVs, evangelizing beyond T4i.'},
-    'Org Effectiveness':{self:3.6,target:4.7,note:'Managing 7 direct reports + 2 supporting PMs across 5 domains. Director bar requires cross-BU organizational influence — visible examples of influencing roadmaps, decisions, or strategy outside T4i. Need executive-level stakeholder management beyond current scope.'}
-  },
-  authoredWork:[
-    {title:'Enterprise Technology Vision: Unified Intelligent Workforce Platform (V2.0)',type:'Strategy Paper',detail:'Co-authored with Adella Bell, Tammy Mao-McDonald, and others. Defines Intuit\'s north star for evolving workforce tech into AI-enabled ecosystem. 5 strategic pillars: Experience Layer, AI Agentic Layer, Connected Workflows, Connected Data, Connected Business Processes. Islands of Excellence platform strategy. Federated build-to-scale approach. Multi-year roadmap FY26-FY28. Presented for EVP/SVP buy-in.'},
-    {title:'Workforce Transformation through AI-Enabled Superagency',type:'Thought Leadership',detail:'Original frameworks: Continuous Value Intelligence (CVI) replacing annual reviews with real-time AI performance intelligence. Flash Talent Assembly for dynamic on-demand team building. Autonomous Cognitive Engine (ACE) for non-linear productivity. Cognitive Readiness Orchestration for managing cognitive capacity. Privacy-first governance principles. Competitive market research with PwC, Air Force, and startup case studies.'}
+  goals:[
+    'Deliver Enterprise HR Tech Vision & Strategy across all T4i pillars',
+    'Drive CK Integration to Aug 2026 completion',
+    'Scale ServiceNow HRSD platform (R1 go-live Jun 8)',
+    'Consolidate TA platform on Avature',
+    'Build high-performing PM team (7 direct + 2 supporting)',
   ],
-  recentWins:[
-    'Expanded role to own ALL of HR Product Tech for T4i — largest scope in org',
-    'Authored Enterprise Vision Strategy (V2.0) — unified intelligent workforce platform, presented for EVP buy-in',
-    'Authored Workforce Transformation paper — original AI superagency frameworks (CVI, Flash Talent Assembly, ACE)',
-    'Promo Tool (Workday Extend) launching Mar 2 with GenAI work highlights — navigated RAI + security approval',
-    'DNME/Performance Portal launched to ~650 managers — >50% task completion in first week',
-    'ServiceNow HRSD: 177 articles migrated, Dynamic Sensitivity Routing for Now Assist AI enabled',
-    'CK Avature integration: Mar 30 cutover confirmed by Lara, workback plan approved',
-    'Expert Hiring AIO requirements delivered to PROD (02/17), Req Approval launched to PROD (02/20)'
+  wins:[
+    'Authored Enterprise Vision Strategy (V2.0) — Unified Intelligent Workforce Platform. 5 strategic pillars, federated build model, Islands of Excellence architecture, FY26-28 roadmap. Presented for EVP/SVP buy-in.',
+    'Authored Workforce Transformation through AI-Enabled Superagency — original frameworks: CVI (real-time performance intelligence), Flash Talent Assembly (AI team building), ACE (autonomous strategic decisions), Cognitive Readiness Orchestration. Privacy-first governance. Competitive research with PwC, US Air Force.',
+    'Expanded role to own ALL of HR Product Tech for T4i — largest scope in org.',
+    'Promo Tool (Workday Extend) launched Mar 2 with GenAI work highlights — navigated RAI + security approval.',
+    'DNME/Performance Portal launched to ~650 managers — >50% task completion in first week.',
+    'ServiceNow HRSD: 177 articles migrated, Dynamic Sensitivity Routing for Now Assist AI.',
+    'CK Avature integration: Mar 30 cutover confirmed, workback plan approved.',
+    'Expert Hiring: AIO to PROD (02/17), Req Approval to PROD (02/20).',
   ],
-  promoStrengths:[
-    'Enterprise-level strategic vision — authored two major strategy papers spanning entire HR tech portfolio',
-    'Large org management — 7+ PMs across 5 domains with complex cross-functional dependencies',
-    'Cross-functional program delivery — managing ServiceNow, Workday, Avature, Learning, Expert Hiring simultaneously',
-    'AI/ML product integration — embedded AI across promo tool, learning platforms, HRSD, and authored AI vision frameworks'
+  strengths:[
+    'Enterprise strategy authorship — two major papers spanning entire HR tech portfolio',
+    'Large org management — 7+ PMs across 5 domains, complex dependencies',
+    'Cross-functional execution — ServiceNow, Workday, Avature, Learning, Expert Hiring simultaneously',
+    'AI product integration — promo tool GenAI, HRSD Now Assist, learning platform agentic features',
   ],
-  promoGaps:[
-    'Org Effectiveness gap (3.6 vs 4.7): Need visible examples of influencing roadmaps, decisions, or strategy OUTSIDE T4i — cross-BU organizational influence at Director bar',
-    'Technology Fluency gap (3.8 vs 4.5): Need enterprise-level AI advocacy — present at company-wide forums, publish AI POVs, evangelize beyond T4i org',
-    'Executive presentations: Need 2-3 high-visibility presentations to VP/SVP audiences beyond current stakeholders',
-    'Quantified business impact narratives: Need $ and efficiency metrics across all pillars for Director packet'
+  areasToGrow:[
+    'Cross-BU influence — need visible examples of shaping roadmaps/strategy outside T4i. Director bar requires organizational influence beyond your own org.',
+    'Enterprise AI advocacy — present at company-wide tech forums, publish AI POVs beyond T4i. Your Superagency paper is the asset, but it needs broader distribution.',
+    'Quantified business impact — build $ and efficiency metrics across all pillars for a Director packet.',
   ],
-  feedbackReceived:[
-    {from:'Leadership',note:'Strong strategic thinker — enterprise vision paper was well-received across T4i leadership. Demonstrates Director-level portfolio thinking.'},
-    {from:'Cross-functional',note:'Effective at driving alignment across complex multi-team programs. Trusted partner for Engineering, Design, and Business stakeholders.'},
-    {from:'Team',note:'Invested in team growth — provides clear direction while giving autonomy. Team feels supported and empowered.'}
-  ]
+  craftPillars:['Product Strategy','Product Execution','Technology Fluency','Org Effectiveness'],
 };
 
 const DEFAULT_TEAM = [
   { name:'Navneet Ramachandran', role:'Staff PM', area:'Employee, Compliance & Sales Learning',
     projects:[
-      {name:'CAMP Compliance Monitor',status:'on-track',detail:'Phase-3 SAT courses go-live by 3/6 with Agent_type fields. All Workplace Harassment variants launched 1/30.'},
-      {name:'Escalation Email Reminders',status:'on-track',detail:'Phased launch: Slack reminders first week of March. Manager escalations April. Director/VP late Q4.'},
-      {name:'Social Engineering Training',status:'at-risk',detail:'SSO multi-course prompt feasible but needs API update. Data dependency on upstream Cybercraft tables. Assignments begin May.'},
-      {name:'One Intuit Learning Platform',status:'on-track',detail:'Rebranded from CyberCraft Univ. MVP end of FY26. Agentic learning features in scope. Combining CyberCraft + Sales + Marketing.'},
-      {name:'CK Docebo Migration',status:'at-risk',detail:'Third-party worker treatment in Workday has no clear owner. Mapping file expected 3/6.'},
-      {name:'Docebo Renewal',status:'at-risk',detail:'Due 3/16. Pricing negotiation for external learner overages. Tentative $1.45M budget PR initiated.'},
-      {name:'Codility Tech Assessment',status:'on-track',detail:'Expanding to academies and TA. Discovery call with Codility scheduled.'}
+      {n:'CAMP Compliance Monitor',s:'on-track',d:'Phase-3 SAT courses go-live 3/6. All Workplace Harassment launched 1/30.'},
+      {n:'Escalation Email Reminders',s:'on-track',d:'Slack reminders first week of March. Manager escalations April. Dir/VP late Q4.'},
+      {n:'Social Engineering Training',s:'at-risk',d:'SSO multi-course prompt needs API update. Upstream data dependency on Cybercraft. Assignments May.'},
+      {n:'One Intuit Learning Platform',s:'on-track',d:'MVP end of FY26. Agentic learning in scope. CyberCraft + Sales + Marketing unified.'},
+      {n:'CK Docebo Migration',s:'at-risk',d:'Third-party worker Workday treatment has no owner. Mapping file expected 3/6.'},
+      {n:'Docebo Renewal',s:'at-risk',d:'Due 3/16. Pricing negotiation ongoing. $1.45M budget PR initiated.'},
+      {n:'Codility Tech Assessment',s:'on-track',d:'Expanding to academies + TA. Discovery call scheduled.'},
     ],
-    risks:['Social Engineering: upstream data dependency on Cybercraft tables','CK Docebo Migration: third-party worker treatment in Workday has no owner','Docebo Renewal due 3/16: pricing + budget allocation unresolved'],
-    promoReadiness:68, currentLevel:'Staff PM', targetLevel:'Principal PM'
+    risks:['Social Eng: upstream data dependency, no owner','CK Docebo: third-party worker treatment unresolved','Docebo Renewal 3/16: pricing + budget unresolved'],
+    targetLevel:'Principal PM'
   },
   { name:'Kevin Tran', role:'Staff PM', area:'ProAdvisor Academy & Intuit Academy',
     projects:[
-      {name:'Glider Migration Decision',status:'completed',detail:'VEP stopping SmartEval migration. Extending Glider for another year. Goal: unlimited assessments for $800K vs potential $4M.'},
-      {name:'ProAdvisor Training Manager v2',status:'on-track',detail:'Launched 2/05. Fast follows completing. Qliksense Dashboard UI update 3/2.'},
-      {name:'ProAdvisor Recert',status:'on-track',detail:'Solutioning in progress. TM designs and CareTool designs completed.'},
-      {name:'ProAdvisor Globalization',status:'on-track',detail:'Technical req doc under review. Credly playbook done. Docebo playbook in progress.'},
-      {name:'Docebo Budget Allocation',status:'at-risk',detail:'Internal budget conversations needed so IA and PAA can fund external usage before 3/16 renewal.'}
+      {n:'Glider Migration',s:'completed',d:'VEP stopped SmartEval. Glider extended. Target: $800K unlimited vs $4M risk.'},
+      {n:'ProAdvisor TM v2',s:'on-track',d:'Launched 2/05. Fast follows completing. Qliksense Dashboard 3/2.'},
+      {n:'ProAdvisor Recert',s:'on-track',d:'Solutioning. TM + CareTool designs complete.'},
+      {n:'ProAdvisor Globalization',s:'on-track',d:'Tech req doc under review. Credly playbook done. Docebo in progress.'},
+      {n:'Docebo Budget',s:'at-risk',d:'Internal allocation needed for IA + PAA external usage before 3/16 renewal.'},
     ],
-    risks:['Glider contract: forecast could balloon from $800K to $4M if unlimited assessments not secured','Docebo budget allocation needs resolution before 3/16 deadline'],
-    promoReadiness:65, currentLevel:'Staff PM', targetLevel:'Principal PM'
+    risks:['Glider: $800K→$4M if unlimited not secured','Docebo budget needs resolution before 3/16'],
+    targetLevel:'Principal PM'
   },
   { name:'Tammy Mao-McDonald', role:'Principal PM', area:'TA, Experts & 3rd Party Experts',
-    recentlyPromoted: true,
+    recentlyPromoted:true,
     projects:[
-      {name:'Avature Post-Implementation',status:'on-track',detail:'Business portal follow-up with Avature Mar 2. Data Manager launch first week of March.'},
-      {name:'iCIMS Data Archival',status:'off-track',detail:'iCIMS cannot produce metadata. PM and Eng working to understand raw data in S3. ETA TBD. Need Himanshu team help.'},
-      {name:'CK Avature Integration',status:'on-track',detail:'Mar 30 cutover confirmed. No tech effort for in-flight hiring. PART driving workback plan.'},
-      {name:'Indeed Direct ATS Feed',status:'at-risk',detail:'Indeed lacks TAMK multi-location tracking. Follow-up mid-March if Radancy API unavailable.'},
-      {name:'Intelligent Routing (EH)',status:'on-track',detail:'PART signed off PRD. Eng committed to Concierge lead form. Pod assignment requirements being refined.'},
-      {name:'Job Architecture',status:'at-risk',detail:'6 months estimated work with Mar 6 deadline. Still waiting for eng resource.'},
-      {name:'Calendly Replacement',status:'at-risk',detail:'Security blocking in FY27. Team pushing delay to Feb 2027 end-of-season.'},
-      {name:'Juicebox AI',status:'on-hold',detail:'On hold until PART aligns with Scott on AI vendor vetting.'}
+      {n:'Avature Post-Impl',s:'on-track',d:'Business portal follow-up Mar 2. Data Manager launch first week of March.'},
+      {n:'iCIMS Data Archival',s:'off-track',d:'No metadata from iCIMS. Raw S3 data incomprehensible. Need Himanshu team.'},
+      {n:'CK Avature Integration',s:'on-track',d:'Mar 30 cutover confirmed. PART driving workback plan.'},
+      {n:'Indeed ATS Feed',s:'at-risk',d:'Indeed lacks TAMK tracking. Mid-March follow-up if Radancy API unavailable.'},
+      {n:'Intelligent Routing',s:'on-track',d:'PRD signed off. Eng committed to Concierge lead form.'},
+      {n:'Job Architecture',s:'at-risk',d:'6 months work, Mar 6 deadline, no eng assigned.'},
+      {n:'Calendly Replacement',s:'at-risk',d:'Security blocking FY27. Pushing delay to Feb 2027.'},
+      {n:'Juicebox AI',s:'on-hold',d:'Waiting PART + Scott alignment on AI vendor vetting.'},
     ],
-    risks:['iCIMS data archival: no metadata, raw data incomprehensible — needs Himanshu team','Job Architecture: 6 months of work, Mar 6 deadline, no eng assigned','Calendly: replacement could disrupt EH if forced before season end','Indeed: Radancy API is only path — fallback needed if it fails before Sep'],
-    currentLevel:'Principal PM', note:'Recently promoted — focus on excelling at current level'
+    risks:['iCIMS archival: no metadata, need Himanshu','Job Arch: 6mo work, Mar 6 deadline, no eng','Calendly: forced replacement could disrupt EH','Indeed: Radancy API only path before Sep'],
+    note:'Recently promoted — focus on excelling at current level'
   },
   { name:'Umang Mathur', role:'Senior PM', area:'Experts — TPEP, Shipping & Internal Tools',
     reportsTo:'Supports Tammy on Experts',
     projects:[
-      {name:'TPEP RTB',status:'on-track',detail:'New managers and product experts for partner firms. Workgroup configuration ongoing.'},
-      {name:'TPEP CK Integration',status:'at-risk',detail:'Executive Summary created for leadership. Recommendation: do not migrate CK Offshore Workers to TPEP by Aug 1.'},
-      {name:'Shipping',status:'on-track',detail:'UI/UX in dev. Solutioning for 300 employees without ODE agent type and expedited shipping by state.'},
-      {name:'Twilio Phase 2',status:'on-track',detail:'Development in progress — on track.'},
-      {name:'Internal Apply Phase 2',status:'on-track',detail:'Development in progress — on track.'},
-      {name:'Admin Console',status:'on-track',detail:'PART aligned on features. Phone Screen Question Refresh PRD in progress.'}
+      {n:'TPEP RTB',s:'on-track',d:'New managers + product experts for partner firms. Workgroup config ongoing.'},
+      {n:'TPEP CK Integration',s:'at-risk',d:'Exec Summary created. Rec: do not migrate CK Offshore Workers to TPEP by Aug 1.'},
+      {n:'Shipping',s:'on-track',d:'UI/UX in dev. Solutioning for 300 non-ODE employees + expedited shipping.'},
+      {n:'Twilio Phase 2',s:'on-track',d:'Dev in progress.'},
+      {n:'Internal Apply Phase 2',s:'on-track',d:'Dev in progress.'},
+      {n:'Admin Console',s:'on-track',d:'PART aligned. Phone Screen Refresh PRD in progress.'},
     ],
-    risks:['TPEP CK: leadership decision needed on Aug 1 go-live — lack of alignment cascading delays'],
-    promoReadiness:58, currentLevel:'Senior PM', targetLevel:'Staff PM'
+    risks:['TPEP CK: leadership decision needed on Aug 1 — lack of alignment cascading delays'],
+    targetLevel:'Staff PM'
   },
   { name:'Amith Hebbar', role:'Senior PM', area:'Expert Hiring — RTB & Season Readiness',
     reportsTo:'Supports Tammy on Experts',
     projects:[
-      {name:'Season Readiness TY26',status:'on-track',detail:'OINP wave 1 in e2e/UAT. Wave 2 in dev. Pay rate + Wave 3 (11 stories) groomed and in dev.'},
-      {name:'Requisition Approval',status:'completed',detail:'Launched to PROD 02/20. Smoke testing complete.'},
-      {name:'AIO Hiring',status:'completed',detail:'All requirements delivered to PROD 02/17.'},
-      {name:'RTB Maintenance',status:'on-track',detail:'HireRight integration update in e2e testing. Non-P0 RTB on hold for CTB priority.'},
-      {name:'EOS Workday Extend App',status:'on-track',detail:'All rehire EOS work groomed with EH and VEP teams. Scope and timeline aligned.'}
+      {n:'Season Readiness TY26',s:'on-track',d:'OINP wave 1 e2e/UAT. Wave 2 in dev. Pay rate + Wave 3 (11 stories) in dev.'},
+      {n:'Req Approval',s:'completed',d:'PROD 02/20. Smoke testing complete.'},
+      {n:'AIO Hiring',s:'completed',d:'PROD 02/17.'},
+      {n:'RTB Maintenance',s:'on-track',d:'HireRight integration in e2e. Non-P0 RTB on hold for CTB.'},
+      {n:'EOS Workday Extend',s:'on-track',d:'Rehire EOS groomed with EH + VEP. Scope aligned.'},
     ],
-    risks:['Phone screen requirements delayed 2 weeks — impact analysis needed','Non-P0 RTB on hold until FY26 end — accumulating tech debt'],
-    promoReadiness:55, currentLevel:'Senior PM', targetLevel:'Staff PM'
+    risks:['Phone screen reqs delayed 2 weeks','Non-P0 RTB on hold — tech debt accumulating'],
+    targetLevel:'Staff PM'
   },
   { name:'Sylesh Ballolla', role:'Principal PM', area:'HRSD — ServiceNow, Onboarding & Offboarding',
     projects:[
-      {name:'ServiceNow HRSD R1',status:'at-risk',detail:'Program YELLOW. Build ~60% complete. 39 services baseline Mar 4. Agent-facing extends to Apr 1. GO-LIVE Jun 8.'},
-      {name:'Change Enablement',status:'at-risk',detail:'Critical resource gap for training/comms. SRT outline drafted. Resource requests with leadership. Target resolution Mar 6.'},
-      {name:'Content Migration',status:'on-track',detail:'177 articles migrated this week. Stabilized structure.'},
-      {name:'AI & Technical',status:'on-track',detail:'Dynamic Sensitivity Routing for Now Assist. SIT launched for AI Safety and core integrations.'},
-      {name:'Testing & Quality',status:'at-risk',detail:'Functional testing 33% complete. SIT 27% complete. E2E scripts recovery needed.'},
-      {name:'Onboarding/Offboarding',status:'on-track',detail:'Managing onboarding and offboarding workflows as part of broader HRSD platform.'}
+      {n:'ServiceNow HRSD R1',s:'at-risk',d:'YELLOW. Build 60%. 39 services Mar 4. Agent-facing Apr 1. GO-LIVE Jun 8.'},
+      {n:'Change Enablement',s:'at-risk',d:'Critical resource gap. SRT drafted. Leadership decision by Mar 6.'},
+      {n:'Content Migration',s:'on-track',d:'177 articles migrated. Stabilized.'},
+      {n:'AI & Technical',s:'on-track',d:'Now Assist Dynamic Sensitivity Routing. SIT for AI Safety + core integrations.'},
+      {n:'Testing',s:'at-risk',d:'Functional 33%. SIT 27%. E2E recovery needed.'},
+      {n:'Onboarding/Offboarding',s:'on-track',d:'Workflows managed within HRSD platform.'},
     ],
-    risks:['HRSD YELLOW: Change Enablement resource gap — leadership decision by Mar 6','1 integration delayed (Data Lake); 3 at-risk','R2 paused for R1 stability — could impact R2 timeline','Build only 60% with Jun 8 go-live — war room Mar 2-6'],
-    promoReadiness:75, currentLevel:'Principal PM', targetLevel:'Senior Principal PM'
+    risks:['YELLOW: Change Enablement resource gap — Mar 6 deadline','1 integration delayed (Data Lake), 3 at-risk','R2 paused for R1 — timeline impact','Build 60% with Jun 8 go-live'],
+    targetLevel:'Senior Principal PM'
   },
   { name:'Pavel Hardak', role:'Principal PM', area:'Workday Platform, Core HR & CK Integration',
     projects:[
-      {name:'CK Integration (Workday)',status:'at-risk',detail:'Benevity ($30K) and Prism (~$12K) PRs filed, delayed by 3PRM. Project plan 80%. Wave 2 shifted to Apr 10.'},
-      {name:'TPEP Migration',status:'at-risk',detail:'No alignment. Executive Summary with Umang — 2 options for leadership. Recommend: no CK offshore TPEP migration by Aug 1.'},
-      {name:'Separation App (WD Extend)',status:'at-risk',detail:'Scope expansion from stakeholders. BRD updated. Pushing back on non-critical. E2E/UAT Mar 10, target early April.'},
-      {name:'Workday Platform & 26R1',status:'on-track',detail:'PTO automation to PROD. Docebo manager training enhancement. 26R1 regression ongoing.'},
-      {name:'Promo App',status:'on-track',detail:'Launching Mar 2. GenAI Work Highlights resolved. SOX controls reassigned.'},
-      {name:'End of Season App',status:'on-track',detail:'Report discrepancy escalation resolved via native Workday workaround.'},
-      {name:'Workday AI & Governance',status:'on-track',detail:'Advanced Comp with WD PMs. 3PRM in progress. uMSA with Nathan targeting Legal next week.'}
+      {n:'CK Integration',s:'at-risk',d:'Benevity ($30K) + Prism ($12K) PRs delayed by 3PRM. Plan 80%. Wave 2 → Apr 10.'},
+      {n:'TPEP Migration',s:'at-risk',d:'No alignment. Exec Summary w/ Umang. Rec: no CK offshore TPEP by Aug 1.'},
+      {n:'Separation App',s:'at-risk',d:'Scope expansion. Pushing back non-critical. E2E Mar 10. Target early April.'},
+      {n:'Workday Platform',s:'on-track',d:'PTO automation to PROD. Docebo enhancement. 26R1 regression.'},
+      {n:'Promo App',s:'on-track',d:'Launched Mar 2. GenAI resolved. SOX reassigned.'},
+      {n:'EOS App',s:'on-track',d:'Report discrepancy resolved via native Workday workaround.'},
+      {n:'WD AI & Governance',s:'on-track',d:'Advanced Comp with WD PMs. 3PRM in progress. uMSA targeting Legal.'},
     ],
-    risks:['TPEP: executive decision needed urgently — cascading CK delays','Separation App: scope expansion threatens Apr 4 delivery','3PRM delays blocking Benevity/Prism PRs','Extend security model gap — architectural fix needed'],
-    promoReadiness:72, currentLevel:'Principal PM', targetLevel:'Senior Principal PM'
+    risks:['TPEP: exec decision needed — cascading CK delays','Separation: scope expansion threatens Apr 4','3PRM blocking Benevity/Prism PRs','Extend security model gap'],
+    targetLevel:'Senior Principal PM'
   }
 ];
 
-const RISK_SUMMARY = [
-  {severity:'high', area:'HRSD ServiceNow R1', owner:'Sylesh', detail:'Program YELLOW. Change Enablement resource gap. Build 60% with Jun 8 go-live. War room Mar 2-6.'},
-  {severity:'high', area:'TPEP CK Integration', owner:'Pavel / Umang', detail:'No executive alignment. Could cascade delays across entire CK timeline. Decision needed now.'},
-  {severity:'high', area:'Separation App Scope', owner:'Pavel', detail:'Continuous scope expansion threatening Apr 4 delivery. Governance tightening required.'},
-  {severity:'high', area:'iCIMS Data Archival', owner:'Tammy', detail:'Raw data in S3 incomprehensible. No iCIMS documentation. Need Himanshu team urgently.'},
-  {severity:'medium', area:'Docebo Renewal', owner:'Navneet / Kevin', detail:'Due 3/16. Pricing + budget allocation for external learners unresolved.'},
-  {severity:'medium', area:'Job Architecture', owner:'Tammy', detail:'6 months of work, Mar 6 deadline. No eng resource assigned.'},
-  {severity:'medium', area:'Calendly Replacement', owner:'Tammy', detail:'Security blocking in FY27. Team requesting delay to Feb 2027.'},
-  {severity:'medium', area:'CK Docebo Migration', owner:'Navneet', detail:'Third-party worker Workday treatment has no owner. Blocking training assignments.'},
-  {severity:'low', area:'Phone Screen Delays', owner:'Amith', detail:'Requirements delayed 2 weeks. Impact analysis needed.'},
-  {severity:'low', area:'Indeed ATS Feed', owner:'Tammy', detail:'Radancy API is only path. Fallback needed if unavailable before Sep.'},
-  {severity:'low', area:'3PRM Review Delays', owner:'Pavel', detail:'Blocking Benevity and Prism PRs. Escalated.'}
+const RISKS = [
+  {sev:'high', area:'HRSD R1', who:'Sylesh', d:'YELLOW. Change Enablement resource gap. Build 60%, Jun 8 go-live. War room Mar 2-6.'},
+  {sev:'high', area:'TPEP Alignment', who:'Pavel/Umang', d:'No exec decision. Cascading CK delays. Decision needed now.'},
+  {sev:'high', area:'Separation Scope', who:'Pavel', d:'Continuous expansion threatening Apr 4. Governance needed.'},
+  {sev:'high', area:'iCIMS Archival', who:'Tammy', d:'No metadata. S3 data incomprehensible. Need Himanshu team.'},
+  {sev:'med', area:'Docebo Renewal', who:'Navneet/Kevin', d:'Due 3/16. Pricing + budget unresolved.'},
+  {sev:'med', area:'Job Architecture', who:'Tammy', d:'6mo work, Mar 6 deadline, no eng.'},
+  {sev:'med', area:'Calendly', who:'Tammy', d:'Security blocking FY27. Requesting delay to Feb 2027.'},
+  {sev:'med', area:'CK Docebo', who:'Navneet', d:'Third-party worker Workday treatment — no owner.'},
+  {sev:'low', area:'Phone Screen', who:'Amith', d:'Delayed 2 weeks. Impact analysis needed.'},
+  {sev:'low', area:'Indeed ATS', who:'Tammy', d:'Radancy API only path. Fallback needed before Sep.'},
 ];
 
-/* ── MARKDOWN RENDERER ── */
+/* ═══ MARKDOWN ═══ */
 function RenderMD({text}) {
   if (!text) return null;
-  const lines = text.split('\n');
-  const elements = [];
+  const lines = text.split('\n'), els = [];
   let i = 0;
   while (i < lines.length) {
-    const line = lines[i];
-    if (line.startsWith('### ')) { elements.push(<h3 key={i} className="text-sm font-semibold text-slate-200 mt-3 mb-1">{line.slice(4)}</h3>); }
-    else if (line.startsWith('## ')) { elements.push(<h2 key={i} className="text-base font-semibold text-white mt-3 mb-1.5">{line.slice(3)}</h2>); }
-    else if (line.startsWith('# ')) { elements.push(<h1 key={i} className="text-lg font-bold text-white mt-3 mb-2">{line.slice(2)}</h1>); }
-    else if (line.startsWith('---')) { elements.push(<hr key={i} className="my-3 border-slate-700" />); }
-    else if (line.startsWith('- ') || line.startsWith('* ')) {
-      const items = [];
-      while (i < lines.length && (lines[i].startsWith('- ') || lines[i].startsWith('* '))) {
-        items.push(<li key={i} className="ml-4 text-sm text-slate-300 leading-relaxed">{fmtInline(lines[i].slice(2))}</li>);
-        i++;
-      }
-      elements.push(<ul key={`ul-${i}`} className="list-disc my-1 space-y-0.5">{items}</ul>);
-      continue;
+    const L = lines[i];
+    if (L.startsWith('### ')) els.push(<h3 key={i} className="text-sm font-semibold text-slate-200 mt-3 mb-1">{L.slice(4)}</h3>);
+    else if (L.startsWith('## ')) els.push(<h2 key={i} className="text-base font-semibold text-white mt-3 mb-1">{L.slice(3)}</h2>);
+    else if (L.startsWith('---')) els.push(<hr key={i} className="my-3 border-slate-700"/>);
+    else if (L.startsWith('- ')||L.startsWith('* ')) {
+      const items=[];
+      while(i<lines.length&&(lines[i].startsWith('- ')||lines[i].startsWith('* '))) { items.push(<li key={i} className="ml-4 text-sm text-slate-300 leading-relaxed">{fmt(lines[i].slice(2))}</li>); i++; }
+      els.push(<ul key={`u${i}`} className="list-disc my-1 space-y-0.5">{items}</ul>); continue;
     }
-    else if (line.match(/^\d+\.\s/)) {
-      const items = [];
-      while (i < lines.length && lines[i].match(/^\d+\.\s/)) {
-        items.push(<li key={i} className="ml-4 text-sm text-slate-300 leading-relaxed">{fmtInline(lines[i].replace(/^\d+\.\s/,''))}</li>);
-        i++;
-      }
-      elements.push(<ol key={`ol-${i}`} className="list-decimal my-1 space-y-0.5">{items}</ol>);
-      continue;
+    else if (L.match(/^\d+\.\s/)) {
+      const items=[];
+      while(i<lines.length&&lines[i].match(/^\d+\.\s/)) { items.push(<li key={i} className="ml-4 text-sm text-slate-300 leading-relaxed">{fmt(lines[i].replace(/^\d+\.\s/,''))}</li>); i++; }
+      els.push(<ol key={`o${i}`} className="list-decimal my-1 space-y-0.5">{items}</ol>); continue;
     }
-    else if (line.startsWith('> ')) { elements.push(<blockquote key={i} className="border-l-2 border-brand-400 pl-3 my-2 text-sm text-slate-400 italic">{fmtInline(line.slice(2))}</blockquote>); }
-    else if (line.trim()) { elements.push(<p key={i} className="text-sm text-slate-300 leading-relaxed my-1">{fmtInline(line)}</p>); }
+    else if (L.startsWith('> ')) els.push(<blockquote key={i} className="border-l-2 border-brand-400 pl-3 my-2 text-sm text-slate-400 italic">{fmt(L.slice(2))}</blockquote>);
+    else if (L.trim()) els.push(<p key={i} className="text-sm text-slate-300 leading-relaxed my-1">{fmt(L)}</p>);
     i++;
   }
-  return <div>{elements}</div>;
+  return <div>{els}</div>;
 }
-function fmtInline(t) {
-  const parts = []; let rem = t; let k = 0;
-  while (rem.length > 0) {
-    const b = rem.match(/\*\*(.+?)\*\*/); const c = rem.match(/`(.+?)`/); const it = rem.match(/\*(.+?)\*/);
-    let fm=null, fi=rem.length;
-    if (b && b.index<fi) {fm='b';fi=b.index;} if (c && c.index<fi) {fm='c';fi=c.index;} if (it && it.index<fi && fm!=='b') {fm='i';fi=it.index;}
-    if (!fm) {parts.push(rem);break;}
-    if (fi>0) parts.push(rem.slice(0,fi));
-    if (fm==='b') {parts.push(<strong key={k++} className="font-semibold text-white">{b[1]}</strong>);rem=rem.slice(fi+b[0].length);}
-    else if (fm==='c') {parts.push(<code key={k++} className="bg-slate-800 text-brand-300 px-1 py-0.5 rounded text-xs font-mono">{c[1]}</code>);rem=rem.slice(fi+c[0].length);}
-    else {parts.push(<em key={k++} className="italic text-slate-400">{it[1]}</em>);rem=rem.slice(fi+it[0].length);}
+function fmt(t) {
+  const p=[]; let r=t, k=0;
+  while(r.length>0) {
+    const b=r.match(/\*\*(.+?)\*\*/), c=r.match(/`(.+?)`/), it=r.match(/\*(.+?)\*/);
+    let m=null, idx=r.length;
+    if(b&&b.index<idx){m='b';idx=b.index;} if(c&&c.index<idx){m='c';idx=c.index;} if(it&&it.index<idx&&m!=='b'){m='i';idx=it.index;}
+    if(!m){p.push(r);break;}
+    if(idx>0)p.push(r.slice(0,idx));
+    if(m==='b'){p.push(<strong key={k++} className="font-semibold text-white">{b[1]}</strong>);r=r.slice(idx+b[0].length);}
+    else if(m==='c'){p.push(<code key={k++} className="bg-slate-800 text-brand-300 px-1 rounded text-xs">{c[1]}</code>);r=r.slice(idx+c[0].length);}
+    else{p.push(<em key={k++} className="italic text-slate-400">{it[1]}</em>);r=r.slice(idx+it[0].length);}
   }
-  return parts;
+  return p;
 }
 
-/* ── RESPONSE ENGINE ── */
-function generateResponse(query, mode, me, team, risks) {
-  const q = query.toLowerCase();
+/* ═══ RESPONSE ENGINE ═══ */
+function respond(q, mode, me, team, risks) {
+  const lq = q.toLowerCase();
+
   if (mode === 'employee') {
-    if (q.includes('promot') || q.includes('readiness') || q.includes('director') || q.includes('ready') || q.includes('promo')) {
-      return `## Promotion Readiness — ${me.target}
+    if (lq.includes('goal') || lq.includes('objective') || lq.includes('okr') || lq.includes('deliver')) {
+      return `## Goals & Progress
+${(me.goals||[]).map((g,i)=>`${i+1}. ${g}`).join('\n')}
 
-**Overall Readiness: ${me.promoReadiness}%**
-
-### Craft Skills vs Target
-${Object.entries(me.skills).map(([k,v])=>`- **${k}** — ${v.self} / ${v.target} ${v.self>=v.target?'✓':`(gap: ${(v.target-v.self).toFixed(1)})`}\n  ${v.note||''}`).join('\n')}
-
-### Strengths Supporting Your Case
-${me.promoStrengths.map(s=>`- ${s}`).join('\n')}
-
-### Gaps to Close
-${me.promoGaps.map(g=>`- ${g}`).join('\n')}
-
-### Key Wins
-${me.recentWins.slice(0,5).map(w=>`- ${w}`).join('\n')}
-
-### Recommended Next Steps
-1. **Cross-BU influence**: Seek opportunities to shape roadmaps or strategy outside T4i — this is the #1 Director-level gap
-2. **AI advocacy**: Present your Workforce Transformation and Enterprise Vision papers at company-wide tech forums
-3. **Executive visibility**: Secure 2-3 presentations to VP/SVP audiences beyond current stakeholders
-4. **Impact quantification**: Build $ and efficiency metrics across all pillars for your Director packet`;
+${me.wins?.length ? `### Key Outcomes Delivered\n${me.wins.slice(0,4).map(w=>`- ${w}`).join('\n')}` : ''}`;
     }
-    if (q.includes('goal') || q.includes('objective') || q.includes('okr')) {
-      return `## Your FY26 Goals & Progress
+    if (lq.includes('craft') || lq.includes('skill') || lq.includes('rubric') || lq.includes('pillar')) {
+      return `## PM Craft Skills — ${me.target || 'Next Level'} Bar
 
-### Active Goals
-1. **Deliver Enterprise HR Tech Vision & Strategy** — ✅ V2.0 authored and presented for EVP buy-in
-2. **Drive CK Integration program** — 🟡 Mar 30 Avature cutover confirmed, Aug 1 Workday target. TPEP alignment pending.
-3. **Scale ServiceNow HRSD platform** — 🟡 R1 go-live Jun 8. Program YELLOW — war room Mar 2-6.
-4. **Establish unified TA platform** — 🟢 Avature post-impl stabilizing. CK integration approved.
-5. **Build high-performing PM team** — 🟢 7 direct + 2 supporting across 5 domains.
-6. **Demonstrate Director-level org effectiveness** — 🟡 Need cross-BU influence examples.
+The four pillars of the PM&D Craft Skills Rubric FY26:
 
-### What Needs Your Focus Now
-- ServiceNow: extra leadership attention this month (war room, resource decisions)
-- TPEP: drive executive decision — blocking Pavel and Umang
-- Docebo renewal (3/16): budget alignment urgent
-- Cross-BU influence: actively seek opportunities outside T4i`;
+${(me.craftPillars||['Product Strategy','Product Execution','Technology Fluency','Org Effectiveness']).map(p=>`### ${p}`).join('\n\n')}
+
+### Your Strengths (outcome-backed)
+${(me.strengths||[]).map(s=>`- ${s}`).join('\n')}
+
+### Where to Invest
+${(me.areasToGrow||[]).map(g=>`- ${g}`).join('\n')}`;
     }
-    if (q.includes('craft') || q.includes('skill') || q.includes('competenc') || q.includes('rubric')) {
-      return `## Craft Skills — ${me.target} Bar
-
-${Object.entries(me.skills).map(([k,v])=>`### ${k}: ${v.self} / ${v.target} (gap: ${(v.target-v.self).toFixed(1)})
-${v.note||''}
-`).join('\n')}
-### Priority Development Order
-1. **Org Effectiveness** (biggest gap: 1.1) — Cross-BU influence is the defining Director competency
-2. **Technology Fluency** (gap: 0.7) — Enterprise AI advocacy beyond T4i
-3. **Product Strategy** (gap: 0.5) — Continue leveraging your authored strategies
-4. **Product Execution** (gap: 0.4) — Deliver ServiceNow R1 and CK on time`;
+    if (lq.includes('win') || lq.includes('outcome') || lq.includes('accomplish') || lq.includes('deliver') || lq.includes('impact')) {
+      return `## Outcomes & Impact
+${(me.wins||[]).map(w=>`- ${w}`).join('\n')}`;
     }
-    if (q.includes('vision') || q.includes('strategy') || q.includes('enterprise') || q.includes('author') || q.includes('paper') || q.includes('wrote')) {
-      return `## Your Authored Strategy Work
-
-### 1. Enterprise Technology Vision: Unified Intelligent Workforce Platform (V2.0)
-**Co-authored with**: Adella Bell, Tammy Mao-McDonald, Palak Samel, Raj Chandramohan, Rajesh Kaja, Ray Murphy
-**Scope**: Defines Intuit's north star for evolving workforce tech into an AI-enabled, unified, anticipatory ecosystem.
-
-**Key contributions**:
-- 5 Strategic Pillars: Experience Layer, AI Agentic Layer, Connected Workflows, Connected Data, Connected Business Processes
-- "Islands of Excellence" platform strategy — preserving anchor platforms while unifying through orchestration
-- Federated build-to-scale approach — multi-disciplined AI agents through MCP/A2A standards
-- "Bring Your Own" framework: BYO AI, Data, Services, Agents, Experience
-- Multi-year execution roadmap (FY26-FY28) targeting EVP/SVP buy-in
-- Hyperpersonalized Onboarding Agent concept
-- 10+ detailed vision-in-action scenarios across Engineering, Marketing, Sales, Legal, Finance, HR
-
-### 2. Workforce Transformation through AI-Enabled Superagency
-**Type**: Original thought leadership
-**Key frameworks you created**:
-- **Continuous Value Intelligence (CVI)**: Real-time AI performance intelligence replacing annual reviews
-- **Flash Talent Assembly**: AI auto-assembling optimal teams from internal + external talent
-- **Autonomous Cognitive Engine (ACE)**: Non-linear productivity through autonomous strategic decision-making
-- **Cognitive Readiness Orchestration**: Managing cognitive capacity as an organizational asset
-- Privacy-first governance principles for all AI workforce systems
-- Competitive market research: PwC, US Air Force, startup case studies
-
-### How to Leverage for Director Promotion
-- These are **Director-level artifacts** — they span the entire enterprise, not just one domain
-- Present the Enterprise Vision to 2+ VP-level audiences outside T4i
-- Publish the Superagency frameworks in internal tech blogs or external forums
-- Use both as primary evidence for Product Strategy competency in your packet
-- Track adoption of strategic recommendations as measurable outcomes`;
+    if (lq.includes('strength') || lq.includes('strong') || lq.includes('good at')) {
+      return `## Your Strengths
+${(me.strengths||[]).map(s=>`- ${s}`).join('\n')}`;
     }
-    if (q.includes('develop') || q.includes('plan') || q.includes('90') || q.includes('growth') || q.includes('path')) {
-      return `## 90-Day Development Plan — Path to ${me.target}
+    if (lq.includes('grow') || lq.includes('gap') || lq.includes('develop') || lq.includes('improve') || lq.includes('invest') || lq.includes('weak')) {
+      return `## Where to Invest
+${(me.areasToGrow||[]).map(g=>`- ${g}`).join('\n')}
 
-### Month 1 (March): Crisis Leadership & Visibility
-- Lead ServiceNow MTV war room (Mar 2-6) — demonstrate crisis leadership at scale
-- Drive TPEP executive decision — show cross-program strategic judgment
-- Resolve Docebo renewal (3/16) — vendor management at scale
-- **Cross-BU move**: Schedule meeting with Finance/Legal tech leads to share Enterprise Vision
-
-### Month 2 (April): Execution & AI Advocacy
-- Deliver Separation App on schedule (Apr 4)
-- Stabilize CK Avature cutover (Mar 30)
-- **AI advocacy**: Present Workforce Transformation frameworks at company-wide tech forum
-- **External**: Submit talk proposal for industry conference or publish AI POV internally
-
-### Month 3 (May): Narrative Building
-- Compile Director promotion packet with quantified business impact
-- Gather 360 feedback from cross-functional leaders AND leaders outside T4i
-- Document team scaling story and portfolio impact metrics
-- Present to your manager as ready for Director consideration
-
-### Critical Gap Closers
-- **Org Effectiveness (3.6→4.7)**: One visible cross-BU influence win per month
-- **Tech Fluency (3.8→4.5)**: One company-wide AI presentation + one published POV`;
+### Suggested Actions
+${(me.areasToGrow||[]).map((g,i)=>`${i+1}. ${g.split('—')[0].trim()}: identify one concrete action this quarter`).join('\n')}`;
     }
-    if (q.includes('feedback') || q.includes('review') || q.includes('perf')) {
-      return `## Feedback Summary
-
-${me.feedbackReceived.map(f=>`### From ${f.from}\n> ${f.note}`).join('\n\n')}
-
-### Patterns
-- **Strategic vision** consistently recognized
-- **Team investment** is a clear strength
-- **Cross-functional alignment** is effective
-
-### To Build Your Director Case
-- Seek feedback specifically on "organizational impact beyond T4i"
-- Ask VP-level stakeholders for written endorsements
-- Request feedback on your authored strategy papers from outside your org`;
+    if (lq.includes('vision') || lq.includes('strategy') || lq.includes('paper') || lq.includes('author') || lq.includes('wrote')) {
+      const papers = me.wins?.filter(w => w.toLowerCase().includes('author') || w.toLowerCase().includes('vision') || w.toLowerCase().includes('strategy paper'));
+      return papers?.length
+        ? `## Your Authored Work\n${papers.map(p=>`- ${p}`).join('\n')}`
+        : `## Authored Work\nNo strategy papers found in your profile. Tell me about work you've authored and I'll add it.`;
     }
-    return `## Welcome, ${me.name} 👋
+    if (lq.includes('plan') || lq.includes('90') || lq.includes('next step') || lq.includes('action')) {
+      return `## Action Plan
 
-I'm your PM&D Growth Agent. I can help with your journey toward **${me.target}**. Try:
+### Based on Your Growth Areas
+${(me.areasToGrow||[]).map((g,i)=>`${i+1}. **${g.split('—')[0].split(':')[0].trim()}**: ${g.includes('—') ? g.split('—')[1].trim() : g}`).join('\n')}
 
-- **"How's my promotion readiness?"** — Assessment with craft skills gaps
-- **"Show me my goals"** — FY26 objectives and progress
-- **"Craft skills assessment"** — Detailed gap analysis against the rubric
-- **"Tell me about my authored work"** — Your strategy papers and how to leverage them
-- **"Create a development plan"** — 90-day path to ${me.target}
-- **"Summarize my feedback"** — Themes and growth areas`;
+### Based on Your Current Goals
+${(me.goals||[]).slice(0,3).map((g,i)=>`${i+1}. ${g}`).join('\n')}`;
+    }
+    return `Hi ${me.name?.split(' ')[0] || 'there'}. I can help with:
+
+- **"My goals"** — objectives and progress
+- **"My outcomes"** — what you've delivered
+- **"Craft skills"** — PM rubric assessment
+- **"Where should I invest?"** — growth areas with actions
+- **"My strategy work"** — authored papers and artifacts
+- **"Action plan"** — next steps based on your gaps`;
   }
 
-  /* ── MANAGER MODE ── */
-  if (q.includes('team') && (q.includes('overview')||q.includes('summary')||q.includes('status')||q.includes('how is')||q.includes('how\'s'))) {
-    return `## Team Overview — ${team.length} PMs
-
+  /* ═══ MANAGER ═══ */
+  if (lq.includes('team') && (lq.includes('overview')||lq.includes('status')||lq.includes('summary'))) {
+    return `## Team Status — ${team.length} PMs
 ${team.map(t=>{
-  const ar=t.projects?.filter(p=>p.status==='at-risk'||p.status==='off-track').length||0;
+  const ar=(t.projects||[]).filter(p=>p.s==='at-risk'||p.s==='off-track').length;
   const ic=ar>2?'🔴':ar>0?'🟡':'🟢';
   const sub=t.reportsTo?` *(${t.reportsTo})*`:'';
-  const promo=t.recentlyPromoted?'\n*Recently promoted — focus on excelling at current level*':(t.promoReadiness?`\nPromo readiness: ${t.promoReadiness}%`:'');
-  return `### ${ic} ${t.name} — ${t.role}${sub}\n**${t.area}** | ${t.projects?.length||0} projects | ${ar} at-risk${promo}`;
+  return `${ic} **${t.name}** — ${t.role}${sub}\n${t.area} | ${t.projects?.length||0} projects, ${ar} at-risk`;
 }).join('\n\n')}`;
   }
 
-  if (q.includes('risk') || q.includes('blocker') || q.includes('escalat') || q.includes('issue')) {
-    const h=risks.filter(r=>r.severity==='high'), m=risks.filter(r=>r.severity==='medium'), l=risks.filter(r=>r.severity==='low');
-    return `## Risk Review — March 2026
+  if (lq.includes('risk') || lq.includes('blocker') || lq.includes('escalat')) {
+    const h=risks.filter(r=>r.sev==='high'), m=risks.filter(r=>r.sev==='med'), l=risks.filter(r=>r.sev==='low');
+    return `## Risks — March 2026
 
-### 🔴 High (${h.length})
-${h.map(r=>`**${r.area}** *(${r.owner})*\n${r.detail}`).join('\n\n')}
+### 🔴 High
+${h.map(r=>`**${r.area}** *(${r.who})* — ${r.d}`).join('\n')}
 
-### 🟡 Medium (${m.length})
-${m.map(r=>`**${r.area}** *(${r.owner})*\n${r.detail}`).join('\n\n')}
+### 🟡 Medium
+${m.map(r=>`**${r.area}** *(${r.who})* — ${r.d}`).join('\n')}
 
-### 🟢 Lower (${l.length})
-${l.map(r=>`**${r.area}** *(${r.owner})*\n${r.detail}`).join('\n\n')}
+### 🟢 Lower
+${l.map(r=>`**${r.area}** *(${r.who})* — ${r.d}`).join('\n')}
 
-### Recommended Actions
-1. **Now**: Drive TPEP executive decision — blocking Pavel and Umang
-2. **By Mar 6**: Ensure Change Enablement resource gap gets leadership decision
-3. **By Mar 16**: Resolve Docebo pricing and budget allocation
-4. **Escalate**: iCIMS archival — get Himanshu team engaged
-5. **Monitor**: Separation App scope — Pavel needs air cover to push back`;
+### Actions
+1. Drive TPEP exec decision — blocking Pavel + Umang
+2. Change Enablement resource decision by Mar 6
+3. Docebo renewal pricing by 3/16
+4. Escalate iCIMS archival — get Himanshu team
+5. Separation App — give Pavel air cover on scope`;
   }
 
-  const pm = team.find(t=>q.includes(t.name.toLowerCase().split(' ')[0]));
-  if (pm && (q.includes('feedback')||q.includes('sbi')||q.includes('draft'))) {
-    const top=pm.projects?.[0], risk=pm.projects?.find(p=>p.status==='at-risk'||p.status==='off-track');
-    return `## SBI Feedback Draft — ${pm.name}
+  const pm = team.find(t=>lq.includes(t.name.toLowerCase().split(' ')[0]));
 
-### Positive (Situation-Behavior-Impact)
-**S**: During ${top?.name||'this quarter'}'s work
-**B**: ${pm.name.split(' ')[0]} ${top?.detail?.slice(0,120)||'delivered consistently'}
-**I**: Maintained momentum on critical deliverables. Demonstrated ${pm.role==='Principal PM'?'senior':'growing'} ownership.
+  if (pm && (lq.includes('feedback')||lq.includes('sbi')||lq.includes('draft'))) {
+    const top=pm.projects?.[0], risk=pm.projects?.find(p=>p.s==='at-risk'||p.s==='off-track');
+    return `## SBI Feedback — ${pm.name}
 
-${risk?`### Developmental
-**S**: On ${risk.name}
-**B**: ${risk.detail?.slice(0,120)}
-**I**: Creates delivery risk. Coach on proactive escalation and stakeholder management.`:''}
-
-### Current Risks
-${(pm.risks||[]).map(r=>`- ${r}`).join('\n')}
-
-${pm.recentlyPromoted?`### Note\n*${pm.name.split(' ')[0]} was recently promoted — focus feedback on excelling at current level, not next promotion.*`:`### Development\n${pm.currentLevel||pm.role} → ${pm.targetLevel||'Next level'} (${pm.promoReadiness||'N/A'}% ready)`}`;
+### Positive
+**S**: ${top?.n||'This quarter'} delivery
+**B**: ${top?.d?.slice(0,100)||'Consistent delivery'}
+**I**: Kept critical path on track.
+${risk?`\n### Developmental\n**S**: ${risk.n}\n**B**: ${risk.d?.slice(0,100)}\n**I**: Creates delivery risk. Coach on proactive escalation.`:''}
+${pm.recentlyPromoted?`\n*Recently promoted — coach on excelling at ${pm.role}, not next promo.*`:''}`;
   }
 
   if (pm) {
     const sub=pm.reportsTo?`\n*${pm.reportsTo}*`:'';
-    const promoLine=pm.recentlyPromoted?'*Recently promoted — focus on excelling at current level*':`Promo readiness: **${pm.promoReadiness}%** → ${pm.targetLevel}`;
     return `## ${pm.name} — ${pm.role}${sub}
 **${pm.area}**
-${promoLine}
+${pm.recentlyPromoted?'*Recently promoted*':pm.targetLevel?`Target: ${pm.targetLevel}`:''}
 
 ### Projects
 ${(pm.projects||[]).map(p=>{
-  const ic=p.status==='completed'?'✅':p.status==='on-track'?'🟢':p.status==='at-risk'?'🟡':p.status==='off-track'?'🔴':'⏸️';
-  return `${ic} **${p.name}** — ${p.detail}`;
-}).join('\n\n')}
+  const ic=p.s==='completed'?'✅':p.s==='on-track'?'🟢':p.s==='at-risk'?'🟡':p.s==='off-track'?'🔴':'⏸️';
+  return `${ic} **${p.n}** — ${p.d}`;
+}).join('\n')}
 
 ### Risks
-${(pm.risks||[]).map(r=>`- ⚠️ ${r}`).join('\n')}`;
+${(pm.risks||[]).map(r=>`- ${r}`).join('\n')}`;
   }
 
-  if (q.includes('promo') || q.includes('promot') || q.includes('readiness')) {
-    const promoTeam = team.filter(t=>!t.recentlyPromoted && t.promoReadiness);
-    const sorted=[...promoTeam].sort((a,b)=>b.promoReadiness-a.promoReadiness);
-    const recently = team.filter(t=>t.recentlyPromoted);
-    return `## Team Promotion Readiness
-
-${sorted.map((t,i)=>{
-  const bar='█'.repeat(Math.round(t.promoReadiness/5))+'░'.repeat(20-Math.round(t.promoReadiness/5));
+  if (lq.includes('promo') || lq.includes('readiness')) {
+    const promo=team.filter(t=>!t.recentlyPromoted&&t.targetLevel);
+    const recent=team.filter(t=>t.recentlyPromoted);
+    return `## Team Promo Targets
+${promo.map(t=>{
   const sub=t.reportsTo?` *(${t.reportsTo})*`:'';
-  return `**${i+1}. ${t.name}** — ${t.promoReadiness}%${sub}\n${t.currentLevel} → ${t.targetLevel}\n\`${bar}\``;
-}).join('\n\n')}
-
-${recently.length?`### Recently Promoted (not on promo track)\n${recently.map(t=>`- **${t.name}** — ${t.role} *(focus on excelling at current level)*`).join('\n')}`:''}`;
+  return `**${t.name}**${sub} — ${t.role} → ${t.targetLevel}`;
+}).join('\n')}
+${recent.length?`\n### Recently Promoted\n${recent.map(t=>`**${t.name}** — ${t.role} *(excelling at current level)*`).join('\n')}`:''}`;
   }
 
-  if (q.includes('develop') || q.includes('coach') || q.includes('grow')) {
-    return `## Team Development Priorities
-
+  if (lq.includes('develop')||lq.includes('coach')) {
+    return `## Development Priorities
 ${team.map(t=>{
   const sub=t.reportsTo?` *(${t.reportsTo})*`:'';
-  if (t.recentlyPromoted) return `### ${t.name} — ${t.role}${sub}\n*Recently promoted* — Coach on excelling at ${t.role} level. Focus on biggest current challenges: ${t.risks?.[0]?.slice(0,80)||'current portfolio'}.`;
-  return `### ${t.name} — ${t.role}${sub}\n**${t.currentLevel}** → **${t.targetLevel}** (${t.promoReadiness}% ready)\n- Focus: ${t.promoReadiness>=75?'Ready for stretch assignment':'Targeted growth in 1-2 areas'}\n- Key challenge: ${t.risks?.[0]?.slice(0,80)||'Continue trajectory'}`;
+  if(t.recentlyPromoted) return `**${t.name}**${sub} — ${t.role}\nRecently promoted. Coach on: ${t.risks?.[0]||'current portfolio'}.`;
+  return `**${t.name}**${sub} — ${t.role} → ${t.targetLevel||'Next'}\nFocus: ${t.risks?.[0]||'Continue trajectory'}`;
 }).join('\n\n')}`;
   }
 
-  return `## Team Management
+  return `I can help manage your **${team.length} PMs**:
 
-I can help with your **${team.length} PMs**. Try:
-
-- **"Team overview"** — Status across all reports
-- **"Show me risks"** — Prioritized risk review
-- **"How is Tammy doing?"** — Any team member deep-dive
-- **"Draft feedback for Sylesh"** — SBI feedback
-- **"Team promo readiness"** — Rankings (with recently promoted noted)
-- **"Team development"** — Coaching priorities`;
+- **"Team overview"** — status across all
+- **"Risks"** — prioritized review
+- **"How is Tammy doing?"** — individual deep-dive
+- **"Feedback for Sylesh"** — SBI draft
+- **"Promo targets"** — team progression
+- **"Development"** — coaching priorities`;
 }
 
-/* ── SETUP FLOW ── */
-function SetupFlow({onComplete}) {
+/* ═══ SETUP FLOW ═══ */
+function Setup({onDone}) {
   const [step, setStep] = useState(0);
-  const [data, setData] = useState({name:'',role:'',org:'',target:'',teamSize:''});
+  const [d, setD] = useState({name:'',role:'',org:'',target:'',goals:'',wins:'',strengths:'',gaps:''});
 
   if (step === 0) return (
     <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="max-w-lg w-full fade-up">
+      <div className="max-w-md w-full fade-up">
         <div className="glass rounded-2xl p-8 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-brand-400 flex items-center justify-center mx-auto mb-5">
-            <span className="text-white text-xl font-bold">G</span>
+          <div className="w-12 h-12 rounded-xl bg-brand-400 flex items-center justify-center mx-auto mb-4">
+            <span className="text-white text-lg font-bold">G</span>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">PM&D Growth Agent</h1>
-          <p className="text-slate-400 text-sm mb-8">Your AI-powered career growth and team management companion</p>
-          <button onClick={()=>onComplete(null)}
-            className="w-full py-3 rounded-xl bg-brand-400 text-white font-medium hover:bg-brand-500 transition-colors mb-3">
+          <h1 className="text-xl font-bold text-white mb-1">PM&D Growth Agent</h1>
+          <p className="text-slate-400 text-sm mb-6">Career growth & team management</p>
+          <button onClick={()=>onDone(null)}
+            className="w-full py-2.5 rounded-xl bg-brand-400 text-white text-sm font-medium hover:bg-brand-500 transition mb-2.5">
             Continue as Ishita Kaul
           </button>
           <button onClick={()=>setStep(1)}
-            className="w-full py-3 rounded-xl border border-slate-600 text-slate-300 font-medium hover:border-brand-400 hover:text-white transition-colors">
-            Set up my own profile
+            className="w-full py-2.5 rounded-xl border border-slate-600 text-slate-300 text-sm font-medium hover:border-brand-400 transition">
+            Set up my profile
           </button>
-          <p className="text-xs text-slate-500 mt-4">Your data stays in your browser (localStorage)</p>
+          <p className="text-[10px] text-slate-600 mt-4">Data stays in your browser</p>
         </div>
       </div>
     </div>
@@ -533,48 +418,68 @@ function SetupFlow({onComplete}) {
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="max-w-lg w-full fade-up">
-        <div className="glass rounded-2xl p-8">
-          <div className="flex items-center gap-2 mb-6">
-            {[1,2].map(s=>(
-              <div key={s} className={`h-1 flex-1 rounded-full ${step>=s?'bg-brand-400':'bg-slate-700'}`}></div>
-            ))}
+        <div className="glass rounded-2xl p-6">
+          <div className="flex gap-1.5 mb-5">
+            {[1,2,3].map(s=><div key={s} className={`h-1 flex-1 rounded-full ${step>=s?'bg-brand-400':'bg-slate-700'}`}/>)}
           </div>
 
-          {step === 1 && (<>
-            <h2 className="text-lg font-semibold text-white mb-1">About you</h2>
-            <p className="text-sm text-slate-400 mb-5">Tell me about your role and aspirations</p>
-            <div className="space-y-3">
-              <input value={data.name} onChange={e=>setData({...data,name:e.target.value})} placeholder="Your name" className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none" />
-              <input value={data.role} onChange={e=>setData({...data,role:e.target.value})} placeholder="Current role (e.g., Staff PM)" className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none" />
-              <input value={data.org} onChange={e=>setData({...data,org:e.target.value})} placeholder="Org / team (e.g., People Tech)" className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none" />
-              <input value={data.target} onChange={e=>setData({...data,target:e.target.value})} placeholder="Promotion target (e.g., Director)" className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none" />
+          {step===1 && (<>
+            <h2 className="text-base font-semibold text-white mb-0.5">About you</h2>
+            <p className="text-xs text-slate-400 mb-4">Your role and target</p>
+            <div className="space-y-2.5">
+              <input value={d.name} onChange={e=>setD({...d,name:e.target.value})} placeholder="Name" className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none"/>
+              <input value={d.role} onChange={e=>setD({...d,role:e.target.value})} placeholder="Current role (e.g., Staff PM)" className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none"/>
+              <input value={d.org} onChange={e=>setD({...d,org:e.target.value})} placeholder="Org / team" className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none"/>
+              <input value={d.target} onChange={e=>setD({...d,target:e.target.value})} placeholder="Target level (e.g., Director)" className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none"/>
             </div>
-            <button onClick={()=>setStep(2)} disabled={!data.name||!data.role}
-              className="w-full py-3 rounded-xl bg-brand-400 text-white font-medium hover:bg-brand-500 transition-colors mt-5 disabled:opacity-40">
-              Next
-            </button>
+            <button onClick={()=>setStep(2)} disabled={!d.name||!d.role}
+              className="w-full py-2.5 rounded-xl bg-brand-400 text-white text-sm font-medium mt-4 disabled:opacity-30 hover:bg-brand-500 transition">Next</button>
           </>)}
 
-          {step === 2 && (<>
-            <h2 className="text-lg font-semibold text-white mb-1">Your team</h2>
-            <p className="text-sm text-slate-400 mb-5">How many direct reports do you manage? (You can add details later in chat)</p>
-            <input value={data.teamSize} onChange={e=>setData({...data,teamSize:e.target.value})} placeholder="Number of direct reports (or 0)" className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none" />
-            <div className="flex gap-2 mt-5">
-              <button onClick={()=>setStep(1)} className="flex-1 py-3 rounded-xl border border-slate-600 text-slate-300 font-medium hover:border-slate-500 transition-colors">Back</button>
+          {step===2 && (<>
+            <h2 className="text-base font-semibold text-white mb-0.5">Your work</h2>
+            <p className="text-xs text-slate-400 mb-4">Goals, outcomes, and strengths (one per line)</p>
+            <div className="space-y-2.5">
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Goals / objectives</label>
+                <textarea value={d.goals} onChange={e=>setD({...d,goals:e.target.value})} rows={3} placeholder={"Deliver X by Q3\nLaunch Y platform\nGrow team capabilities"} className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none resize-none"/>
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Key outcomes / wins</label>
+                <textarea value={d.wins} onChange={e=>setD({...d,wins:e.target.value})} rows={3} placeholder={"Launched feature X — 30% efficiency gain\nAuthored strategy paper for VP review\nLed cross-functional initiative"} className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none resize-none"/>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={()=>setStep(1)} className="flex-1 py-2.5 rounded-xl border border-slate-600 text-slate-300 text-sm hover:border-slate-500 transition">Back</button>
+              <button onClick={()=>setStep(3)} className="flex-1 py-2.5 rounded-xl bg-brand-400 text-white text-sm font-medium hover:bg-brand-500 transition">Next</button>
+            </div>
+          </>)}
+
+          {step===3 && (<>
+            <h2 className="text-base font-semibold text-white mb-0.5">Growth areas</h2>
+            <p className="text-xs text-slate-400 mb-4">What you're strong at and where to invest (one per line)</p>
+            <div className="space-y-2.5">
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Strengths</label>
+                <textarea value={d.strengths} onChange={e=>setD({...d,strengths:e.target.value})} rows={3} placeholder={"Cross-functional execution\nStrategic vision and roadmapping\nTeam development"} className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none resize-none"/>
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Areas to grow</label>
+                <textarea value={d.gaps} onChange={e=>setD({...d,gaps:e.target.value})} rows={3} placeholder={"Executive stakeholder management\nQuantifying business impact\nExternal thought leadership"} className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none resize-none"/>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={()=>setStep(2)} className="flex-1 py-2.5 rounded-xl border border-slate-600 text-slate-300 text-sm hover:border-slate-500 transition">Back</button>
               <button onClick={()=>{
+                const parse = s => s.split('\n').map(l=>l.trim()).filter(Boolean);
                 const profile = {
-                  name:data.name, role:data.role, org:data.org, target:data.target||'Next level',
-                  promoReadiness:50,
-                  skills:{'Product Strategy':{self:3.5,target:4.5,note:''},'Product Execution':{self:3.5,target:4.5,note:''},'Technology Fluency':{self:3.5,target:4.5,note:''},'Org Effectiveness':{self:3.5,target:4.5,note:''}},
-                  authoredWork:[], recentWins:['(Add your wins by chatting with me)'],
-                  promoStrengths:['(Tell me about your strengths)'], promoGaps:['(Ask me to assess your gaps)'],
-                  feedbackReceived:[{from:'(Add feedback)',note:'Chat with me to build your feedback summary'}]
+                  name:d.name, role:d.role, org:d.org, target:d.target||'Next level',
+                  goals:parse(d.goals), wins:parse(d.wins), strengths:parse(d.strengths), areasToGrow:parse(d.gaps),
+                  craftPillars:['Product Strategy','Product Execution','Technology Fluency','Org Effectiveness'],
                 };
-                localStorage.setItem('pmd_custom_profile', JSON.stringify(profile));
-                onComplete(profile);
-              }} className="flex-1 py-3 rounded-xl bg-brand-400 text-white font-medium hover:bg-brand-500 transition-colors">
-                Launch Agent
-              </button>
+                localStorage.setItem('pmd_profile', JSON.stringify(profile));
+                onDone(profile);
+              }} className="flex-1 py-2.5 rounded-xl bg-brand-400 text-white text-sm font-medium hover:bg-brand-500 transition">Launch</button>
             </div>
           </>)}
         </div>
@@ -583,234 +488,144 @@ function SetupFlow({onComplete}) {
   );
 }
 
-/* ── MAIN APP ── */
+/* ═══ APP ═══ */
 function App() {
   const [me, setMe] = useState(null);
-  const [setupDone, setSetupDone] = useState(false);
+  const [ready, setReady] = useState(false);
   const [mode, setMode] = useState('employee');
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
-  const chatEnd = useRef(null);
-  const inputRef = useRef(null);
+  const [welcome, setWelcome] = useState(true);
+  const end = useRef(null);
+  const inp = useRef(null);
 
-  useEffect(()=>{
-    const saved = localStorage.getItem('pmd_custom_profile');
-    if (saved) { setMe(JSON.parse(saved)); setSetupDone(true); }
-    else { /* check if returning default user */ }
-  },[]);
+  useEffect(()=>{ const s=localStorage.getItem('pmd_profile'); if(s){setMe(JSON.parse(s));setReady(true);} },[]);
+  useEffect(()=>{ end.current?.scrollIntoView({behavior:'smooth'}); },[msgs,loading]);
 
-  useEffect(()=>{ chatEnd.current?.scrollIntoView({behavior:'smooth'}); },[msgs,loading]);
+  const team = me?.name===DEFAULT_ME.name ? DEFAULT_TEAM : [];
+  const risks = me?.name===DEFAULT_ME.name ? RISKS : [];
 
-  const handleSetupComplete = (customProfile) => {
-    if (customProfile) { setMe(customProfile); }
-    else { setMe(DEFAULT_ME); }
-    setSetupDone(true);
-  };
-
-  const team = me?.name === DEFAULT_ME.name ? DEFAULT_TEAM : [];
-  const risks = me?.name === DEFAULT_ME.name ? RISK_SUMMARY : [];
-
-  const switchMode = (m) => { setMode(m); setMsgs([]); setShowWelcome(true); };
+  const go = (m) => { setMode(m); setMsgs([]); setWelcome(true); };
 
   const send = async (text) => {
-    const userMsg = text || input.trim();
-    if (!userMsg || loading) return;
-    setInput(''); setShowWelcome(false);
-    setMsgs(p=>[...p,{role:'user',content:userMsg}]);
-    setLoading(true);
-    await new Promise(r=>setTimeout(r, 300+Math.random()*500));
-    const result = generateResponse(userMsg, mode, me||DEFAULT_ME, team, risks);
-    setMsgs(p=>[...p,{role:'assistant',content:result}]);
+    const msg = text||input.trim(); if(!msg||loading) return;
+    setInput(''); setWelcome(false);
+    setMsgs(p=>[...p,{r:'u',c:msg}]); setLoading(true);
+    await new Promise(r=>setTimeout(r, 250+Math.random()*400));
+    setMsgs(p=>[...p,{r:'a',c:respond(msg, mode, me||DEFAULT_ME, team, risks)}]);
     setLoading(false);
-    setTimeout(()=>inputRef.current?.focus(), 100);
+    setTimeout(()=>inp.current?.focus(),100);
   };
 
-  const resetProfile = () => { localStorage.removeItem('pmd_custom_profile'); setMe(null); setSetupDone(false); setMsgs([]); setShowWelcome(true); };
+  const reset = () => { localStorage.removeItem('pmd_profile'); setMe(null); setReady(false); setMsgs([]); setWelcome(true); };
 
-  if (!setupDone) return <SetupFlow onComplete={handleSetupComplete} />;
+  if (!ready) return <Setup onDone={p=>{ if(p)setMe(p); else setMe(DEFAULT_ME); setReady(true); }} />;
 
-  const empGuides = [
-    {icon:'📊', label:'Promotion Readiness', prompt:'How is my promotion readiness?'},
-    {icon:'🎯', label:'My Goals', prompt:'Show me my goals and progress'},
-    {icon:'📐', label:'Craft Skills', prompt:'Assess my craft skills'},
-    {icon:'💡', label:'My Strategy Work', prompt:'Tell me about my authored strategy work'},
-    {icon:'📋', label:'Development Plan', prompt:'Create a 90-day development plan'},
-    {icon:'💬', label:'Feedback', prompt:'Summarize my feedback'},
-  ];
-  const mgrGuides = [
-    {icon:'👥', label:'Team Overview', prompt:'Team overview with status'},
-    {icon:'⚠️', label:'Risk Review', prompt:'Show me all current risks'},
-    {icon:'📈', label:'Promo Readiness', prompt:'Team promotion readiness'},
-    {icon:'📝', label:'Draft Feedback', prompt:'Help me draft feedback'},
-    {icon:'🌱', label:'Development', prompt:'Team development priorities'},
-  ];
-  const guides = mode==='employee' ? empGuides : mgrGuides;
+  const eg = mode==='employee'
+    ? [{l:'My Goals',p:'Show my goals'},{l:'Outcomes',p:'What have I delivered?'},{l:'Craft Skills',p:'Assess my craft skills'},{l:'Growth Areas',p:'Where should I invest?'},{l:'Strategy Work',p:'My authored work'},{l:'Action Plan',p:'What should I do next?'}]
+    : [{l:'Team Status',p:'Team overview'},{l:'Risks',p:'Show risks'},{l:'Promo Targets',p:'Promo targets'},{l:'Feedback',p:'Help draft feedback'},{l:'Development',p:'Development priorities'}];
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
       <header className="bg-brand-800/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto px-4 py-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-brand-400 flex items-center justify-center">
-              <span className="text-white text-sm font-bold">G</span>
+        <div className="max-w-4xl mx-auto px-4 py-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-brand-400 flex items-center justify-center">
+              <span className="text-white text-xs font-bold">G</span>
             </div>
             <div>
-              <h1 className="text-sm font-semibold text-white">PM&D Growth Agent</h1>
-              <p className="text-[10px] text-slate-400">{me?.name} — {me?.role}</p>
+              <h1 className="text-sm font-semibold text-white leading-tight">PM&D Growth Agent</h1>
+              <p className="text-[10px] text-slate-400">{me?.name} · {me?.role}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <div className="flex bg-slate-800/60 rounded-full p-0.5">
-              <button onClick={()=>switchMode('employee')}
-                className={`px-3.5 py-1 rounded-full text-xs font-medium transition-all ${mode==='employee'?'bg-brand-400 text-white':'text-slate-400 hover:text-white'}`}>
-                My Growth
-              </button>
-              {team.length > 0 && (
-                <button onClick={()=>switchMode('manager')}
-                  className={`px-3.5 py-1 rounded-full text-xs font-medium transition-all ${mode==='manager'?'bg-brand-400 text-white':'text-slate-400 hover:text-white'}`}>
-                  My Team
-                </button>
-              )}
+              <button onClick={()=>go('employee')} className={`px-3 py-1 rounded-full text-xs font-medium transition ${mode==='employee'?'bg-brand-400 text-white':'text-slate-400 hover:text-white'}`}>My Growth</button>
+              {team.length>0 && <button onClick={()=>go('manager')} className={`px-3 py-1 rounded-full text-xs font-medium transition ${mode==='manager'?'bg-brand-400 text-white':'text-slate-400 hover:text-white'}`}>My Team</button>}
             </div>
-            <button onClick={resetProfile} className="text-slate-500 hover:text-slate-300 transition-colors" title="Switch profile">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <button onClick={reset} className="text-slate-500 hover:text-slate-300" title="Switch profile">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Chat */}
-      <div className="flex-1 max-w-5xl w-full mx-auto px-4 pb-36">
-        {showWelcome && (
-          <div className="fade-up pt-6 pb-4">
-            <div className="text-center mb-5">
-              <h2 className="text-xl font-semibold text-white mb-1">
-                {mode==='employee' ? `Welcome back, ${me?.name?.split(' ')[0]}` : 'Team Dashboard'}
+      <div className="flex-1 max-w-4xl w-full mx-auto px-4 pb-36">
+        {welcome && (
+          <div className="fade-up pt-6 pb-3">
+            <div className="text-center mb-4">
+              <h2 className="text-lg font-semibold text-white">
+                {mode==='employee'?`${me?.name?.split(' ')[0]}'s Growth`:'Team Dashboard'}
               </h2>
-              <p className="text-slate-400 text-sm">
-                {mode==='employee' ? `Tracking your path to ${me?.target}` : `${team.length} PMs across ${team.filter(t=>!t.reportsTo).length} domains`}
+              <p className="text-slate-500 text-xs">
+                {mode==='employee'?(me?.target?`Path to ${me.target}`:'Your growth companion'):`${team.length} PMs`}
               </p>
             </div>
 
-            {/* Employee readiness card */}
-            {mode==='employee' && me && (
-              <div className="glass rounded-2xl p-5 mb-5 max-w-2xl mx-auto">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-sm font-medium text-white">{me.role}</p>
-                    <p className="text-xs text-slate-400">{me.org}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-brand-300">{me.promoReadiness}%</p>
-                    <p className="text-[10px] text-slate-500">Readiness</p>
-                  </div>
-                </div>
-                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-brand-400 to-brand-300 rounded-full" style={{width:`${me.promoReadiness}%`}}></div>
-                </div>
-                <div className="flex justify-between mt-1">
-                  <span className="text-[10px] text-slate-500">{me.role}</span>
-                  <span className="text-[10px] text-brand-300">{me.target}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Manager team cards */}
-            {mode==='manager' && team.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-5">
+            {mode==='manager' && team.length>0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-4">
                 {team.map((t,i) => {
-                  const ar = t.projects?.filter(p=>p.status==='at-risk'||p.status==='off-track').length||0;
-                  const dot = ar>2?'bg-rose-400':ar>0?'bg-amber-400':'bg-mint-400';
+                  const ar=(t.projects||[]).filter(p=>p.s==='at-risk'||p.s==='off-track').length;
+                  const dot=ar>2?'bg-rose-400':ar>0?'bg-amber-400':'bg-mint-400';
                   return (
-                    <button key={i} onClick={()=>send(`How is ${t.name.split(' ')[0]} doing?`)}
-                      className="card-hover glass rounded-xl p-3 text-left">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <div className={`w-2 h-2 rounded-full ${dot}`}></div>
-                        <span className="text-xs font-semibold text-white truncate">{t.name.split(' ')[0]} {t.name.split(' ').length>1?t.name.split(' ')[1]?.charAt(0)+'.':''}</span>
+                    <button key={i} onClick={()=>send(`How is ${t.name.split(' ')[0]} doing?`)} className="card-hover glass rounded-lg p-2.5 text-left">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <div className={`w-1.5 h-1.5 rounded-full ${dot}`}/>
+                        <span className="text-[11px] font-semibold text-white truncate">{t.name.split(' ')[0]}</span>
                       </div>
-                      <p className="text-[10px] text-slate-400">{t.role}</p>
-                      <p className="text-[10px] text-slate-500 truncate">{t.area}</p>
-                      {t.reportsTo && <p className="text-[9px] text-brand-300 mt-0.5">{t.reportsTo}</p>}
+                      <p className="text-[9px] text-slate-400 truncate">{t.role} · {t.area.split('—')[0].trim()}</p>
+                      {t.reportsTo && <p className="text-[8px] text-brand-300 mt-0.5">{t.reportsTo}</p>}
                     </button>
                   );
                 })}
               </div>
             )}
 
-            {/* Guide cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-w-2xl mx-auto">
-              {guides.map((g,i)=>(
-                <button key={i} onClick={()=>send(g.prompt)}
-                  className="card-hover glass rounded-xl p-3 text-left">
-                  <span className="text-base mb-1 block">{g.icon}</span>
-                  <span className="text-xs font-medium text-slate-200">{g.label}</span>
-                </button>
-              ))}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-w-xl mx-auto">
+              {eg.map((g,i)=>(<button key={i} onClick={()=>send(g.p)} className="card-hover glass rounded-lg px-3 py-2.5 text-left">
+                <span className="text-xs font-medium text-slate-200">{g.l}</span>
+              </button>))}
             </div>
           </div>
         )}
 
-        {/* Messages */}
         {msgs.map((m,i) => (
-          <div key={i} className={`msg-enter ${m.role==='user'?'flex justify-end':''} mt-3`}>
-            {m.role==='user' ? (
-              <div className="max-w-[75%] bg-brand-400 rounded-2xl rounded-br-sm px-4 py-2.5">
-                <p className="text-sm text-white">{m.content}</p>
-              </div>
+          <div key={i} className={`msg-enter ${m.r==='u'?'flex justify-end':''} mt-3`}>
+            {m.r==='u' ? (
+              <div className="max-w-[75%] bg-brand-400 rounded-2xl rounded-br-sm px-4 py-2"><p className="text-sm text-white">{m.c}</p></div>
             ) : (
-              <div className="glass rounded-2xl px-5 py-4 max-w-full">
-                <RenderMD text={m.content} />
-              </div>
+              <div className="glass rounded-2xl px-4 py-3"><RenderMD text={m.c}/></div>
             )}
           </div>
         ))}
 
-        {loading && (
-          <div className="mt-3 msg-enter">
-            <div className="glass rounded-2xl px-5 py-4 inline-flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-brand-300 typing-dot"></div>
-              <div className="w-2 h-2 rounded-full bg-brand-300 typing-dot"></div>
-              <div className="w-2 h-2 rounded-full bg-brand-300 typing-dot"></div>
-            </div>
-          </div>
-        )}
-        <div ref={chatEnd} />
+        {loading && <div className="mt-3 msg-enter"><div className="glass rounded-2xl px-4 py-3 inline-flex gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-brand-300 typing-dot"/><div className="w-1.5 h-1.5 rounded-full bg-brand-300 typing-dot"/><div className="w-1.5 h-1.5 rounded-full bg-brand-300 typing-dot"/>
+        </div></div>}
+        <div ref={end}/>
       </div>
 
-      {/* Input */}
-      <div className="fixed bottom-0 inset-x-0 bg-gradient-to-t from-brand-900 via-brand-900/95 to-transparent pt-6 pb-4 px-4">
-        <div className="max-w-5xl mx-auto">
-          {!showWelcome && (
-            <div className="flex gap-1.5 mb-2 overflow-x-auto pb-1">
-              {(mode==='employee'
-                ? ['Promotion readiness','My goals','Craft skills','My strategy work','Development plan']
-                : ['Team overview','Risk review','Promo readiness','Draft feedback','Team development']
-              ).map((s,i)=>(
-                <button key={i} onClick={()=>send(s)}
-                  className="whitespace-nowrap px-3 py-1 rounded-full text-xs font-medium bg-slate-800/60 border border-slate-700 text-slate-400 hover:text-white hover:border-brand-400 transition-colors">
-                  {s}
-                </button>
+      <div className="fixed bottom-0 inset-x-0 bg-gradient-to-t from-brand-900 via-brand-900/95 to-transparent pt-5 pb-3 px-4">
+        <div className="max-w-4xl mx-auto">
+          {!welcome && (
+            <div className="flex gap-1.5 mb-2 overflow-x-auto">
+              {(mode==='employee'?['Goals','Outcomes','Craft skills','Growth areas','Action plan']:['Overview','Risks','Promo targets','Feedback','Development']).map((s,i)=>(
+                <button key={i} onClick={()=>send(s)} className="whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-800/60 border border-slate-700 text-slate-400 hover:text-white hover:border-brand-400 transition">{s}</button>
               ))}
             </div>
           )}
-          <div className="flex gap-2 items-end">
-            <div className="flex-1 glass rounded-xl focus-within:border-brand-400 transition-all">
-              <input ref={inputRef} value={input}
-                onChange={e=>setInput(e.target.value)}
-                onKeyDown={e=>e.key==='Enter'&&send()}
-                placeholder={mode==='employee'?'Ask about your growth, goals, craft skills...':'Ask about your team, risks, feedback...'}
-                className="w-full px-4 py-3 bg-transparent text-sm text-white outline-none rounded-xl" />
+          <div className="flex gap-2">
+            <div className="flex-1 glass rounded-xl focus-within:border-brand-400 transition">
+              <input ref={inp} value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()}
+                placeholder={mode==='employee'?'Ask about goals, skills, growth...':'Ask about team, risks, feedback...'}
+                className="w-full px-4 py-2.5 bg-transparent text-sm text-white outline-none rounded-xl"/>
             </div>
-            <button onClick={()=>send()}
-              disabled={!input.trim()||loading}
-              className="w-10 h-10 rounded-xl bg-brand-400 text-white flex items-center justify-center hover:bg-brand-500 disabled:opacity-30 transition-colors flex-shrink-0">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <button onClick={()=>send()} disabled={!input.trim()||loading}
+              className="w-9 h-9 rounded-xl bg-brand-400 text-white flex items-center justify-center hover:bg-brand-500 disabled:opacity-30 transition flex-shrink-0">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
           </div>
-          <p className="text-[10px] text-slate-600 text-center mt-2">Portfolio data through March 2026 | Your data stays in your browser</p>
         </div>
       </div>
     </div>
