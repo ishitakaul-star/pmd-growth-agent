@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// SQLite for local dev — switch to "postgresql" + Vercel DATABASE_URL for production
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ═══ NextAuth Required Models ═══
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+model User {
+  id            String        @id @default(cuid())
+  name          String?
+  email         String?       @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  profile       UserProfile?
+}
+
+// ═══ App Models ═══
+// NOTE: For SQLite, arrays/JSON stored as String (JSON-serialized). For PostgreSQL, use String[] and Json.
+
+model UserProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role          String   @default("employee")   // "manager" | "employee"
+  jobTitle      String?
+  org           String?
+  targetLevel   String?
+  strengths     String?  // JSON-serialized string[] — use String[] for PostgreSQL
+  areasToGrow   String?  // JSON-serialized string[] — use String[] for PostgreSQL
+  craftPillars  String?  // JSON-serialized string[] — use String[] for PostgreSQL
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  goals         Goal[]
+  wins          Win[]
+  feedback      Feedback[]
+  contextDocs   ContextDoc[]
+  teamMembers   TeamMember[]
+}
+
+model Goal {
+  id          String      @id @default(cuid())
+  profileId   String
+  profile     UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title       String
+  status      String      @default("on_track")
+  progress    Int         @default(0)
+  craftPillar String?
+  dueDate     DateTime?
+  keyResults  String?     // JSON-serialized — use Json for PostgreSQL
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Win {
+  id          String      @id @default(cuid())
+  profileId   String
+  profile     UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  description String
+  date        DateTime?
+  createdAt   DateTime    @default(now())
+}
+
+model Feedback {
+  id          String      @id @default(cuid())
+  profileId   String
+  profile     UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  fromName    String
+  type        String
+  craftPillar String?
+  summary     String
+  sentiment   String      @default("positive")
+  date        DateTime    @default(now())
+}
+
+model ContextDoc {
+  id        String      @id @default(cuid())
+  profileId String
+  profile   UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  source    String      @default("upload")
+  createdAt DateTime    @default(now())
+}
+
+model TeamMember {
+  id                String      @id @default(cuid())
+  managerId         String
+  manager           UserProfile @relation(fields: [managerId], references: [id], onDelete: Cascade)
+  name              String
+  role              String
+  area              String
+  targetLevel       String?
+  reportsTo         String?
+  recentlyPromoted  Boolean     @default(false)
+  projects          String?     // JSON-serialized — use Json for PostgreSQL
+  risks             String?     // JSON-serialized string[] — use String[] for PostgreSQL
+  devRecommendations String?    // JSON-serialized — use Json for PostgreSQL
+  note              String?
+}
+
+model SlackMessage {
+  id        String   @id @default(cuid())
+  channelId String
+  userId    String?
+  userName  String?
+  text      String
+  ts        String
+  createdAt DateTime @default(now())
+  @@unique([channelId, ts])
+}
