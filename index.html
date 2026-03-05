@@ -3,275 +3,410 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PM&D Growth Agent — Intuit Performance Ecosystem</title>
+  <title>PM&D Growth Agent</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            intuit: { blue: '#0077C5', dark: '#1A1A2E', green: '#2CA01C', navy: '#0D2B4E', light: '#E8F4FD', accent: '#6C5CE7', warm: '#FF6B35' }
-          }
+            brand: { 50:'#EEF4FF', 100:'#D9E5FF', 200:'#B3CBFF', 500:'#0077C5', 600:'#005FA3', 700:'#004A80', 800:'#0D2B4E', 900:'#091D36' },
+            success: { 50:'#ECFDF5', 500:'#10B981', 700:'#047857' },
+            warn: { 50:'#FFFBEB', 500:'#F59E0B', 700:'#B45309' },
+            danger: { 50:'#FEF2F2', 500:'#EF4444' },
+          },
+          fontFamily: { sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'] },
         }
       }
     }
   </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; background:#F8FAFC; color:#0f172a; -webkit-font-smoothing:antialiased; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    .fade-up { animation: fadeUp 0.4s ease-out both; }
+    .fade-up-d1 { animation-delay: 0.05s; }
+    .fade-up-d2 { animation-delay: 0.1s; }
+    .fade-up-d3 { animation-delay: 0.15s; }
+    .fade-up-d4 { animation-delay: 0.2s; }
     @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
     .typing-dot { animation: pulse-dot 1.4s infinite; }
     .typing-dot:nth-child(2) { animation-delay:.2s; }
     .typing-dot:nth-child(3) { animation-delay:.4s; }
-    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-    .fade-in { animation: fadeIn 0.3s ease-out; }
-    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar { width:5px; }
     ::-webkit-scrollbar-track { background:transparent; }
-    ::-webkit-scrollbar-thumb { background:#d1d5db; border-radius:3px; }
-    body { margin:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:10px; }
     .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    input:focus, textarea:focus, select:focus { outline:none; box-shadow:0 0 0 3px rgba(0,119,197,0.15); border-color:#0077C5; }
+    .markdown-content strong { font-weight: 600; }
+    .markdown-content em { font-style: italic; }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-900 antialiased">
+<body>
 <div id="root"></div>
 <script type="text/babel" data-type="module">
-const { useState, useEffect, useRef, createElement: h } = React;
+const { useState, useEffect, useRef, useCallback } = React;
 
-/* ── SVG Radar Chart ── */
-function RadarChart({ data, size = 260 }) {
-  const cx = size/2, cy = size/2, r = size/2 - 40;
-  const n = data.length;
-  const angleStep = (2*Math.PI)/n;
-  const getPoint = (i, val, max=5) => {
-    const a = -Math.PI/2 + i*angleStep;
-    return [cx + (val/max)*r*Math.cos(a), cy + (val/max)*r*Math.sin(a)];
+/* ── CLAUDE API ── */
+const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
+const SYSTEM_PROMPT = `You are the PM&D Growth Agent, an AI coach for Product Managers at Intuit. You help with:
+- Goal creation aligned to PM Craft Skills (Product Strategy, Product Execution, Technology Fluency, Org Effectiveness)
+- Feedback drafting using the SBI (Situation-Behavior-Impact) framework
+- 1:1 prep and coaching
+- Promotion readiness assessment
+- Development planning
+
+The user is Alex Chen, a Staff PM (T4) on the Platform team, working toward Senior Staff PM (T5).
+
+Current context:
+- 4 active goals: SMB AI onboarding (72%), AI platform strategy (55%), data pipeline reliability (38% - at risk), PM mentorship (60%)
+- Recent feedback themes: execution speed (strength), stakeholder communication timing (growth area)
+- Promotion readiness: 68% for T5. Strengths: Product Execution, Strategy. Gaps: Org Effectiveness, Technology Fluency
+- Craft skills rubric has 4 pillars, each with specific behaviors at each level
+
+Be concise, specific, and actionable. Use bullet points and structure. Reference specific craft skills when relevant. Keep responses under 250 words.`;
+
+async function callClaude(messages, systemOverride) {
+  const apiKey = localStorage.getItem('anthropic_api_key');
+  if (!apiKey) throw new Error('NO_KEY');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 1024,
+      system: systemOverride || SYSTEM_PROMPT,
+      messages,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${res.status}`);
+  }
+  const data = await res.json();
+  return data.content[0].text;
+}
+
+/* ── ICONS ── */
+function I({name,size=18,className=''}) {
+  const paths = {
+    grid:'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
+    target:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12zM12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z',
+    msg:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
+    cal:'M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 10h18M8 2v4M16 2v4',
+    layers:'M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+    award:'M12 1a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM8.21 13.89 7 23l5-3 5 3-1.21-9.12',
+    trend:'M22 7l-8.5 8.5-5-5L2 17M16 7h6v6',
+    spark:'M12 3l-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z',
+    check:'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4 12 14.01 9 11.01',
+    alert:'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01',
+    send:'M22 2 11 13M22 2l-7 20-4-9-9-4z',
+    x:'M18 6 6 18M6 6l12 12',
+    user:'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
+    brief:'M2 7h20v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zM16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16',
+    zap:'M13 2 3 14h9l-1 8 10-12h-9z',
+    shield:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+    bulb:'M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4',
+    book:'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z',
+    circle:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z',
+    file:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6',
+    down:'M6 9l6 6 6-6',
+    up:'M18 15l-6-6-6 6',
+    arrow:'M5 12h14M12 5l7 7-7 7',
+    plus:'M12 5v14M5 12h14',
+    bar:'M18 20V10M12 20V4M6 20v-6',
+    bot:'M12 8V4H8M4 8h16v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM2 14h2M20 14h2M15 13v2M9 13v2',
+    key:'M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4',
+    refresh:'M1 4v6h6M23 20v-6h-6M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15',
+    settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z',
   };
-  const polygon = (key, max=5) => data.map((d,i)=>getPoint(i,d[key],max).join(',')).join(' ');
-  const gridLevels = [1,2,3,4,5];
-
   return (
-    <svg width={size} height={size} className="mx-auto">
-      {gridLevels.map(lv => (
-        <polygon key={lv} points={data.map((_,i)=>getPoint(i,lv).join(',')).join(' ')}
-          fill="none" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="3 3"/>
-      ))}
-      {data.map((_,i) => {
-        const [x,y] = getPoint(i,5);
-        return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="#e5e7eb" strokeWidth="1"/>;
-      })}
-      <polygon points={polygon('target')} fill="none" stroke="#FF6B35" strokeWidth="2" strokeDasharray="5 5"/>
-      <polygon points={polygon('manager')} fill="rgba(44,160,28,0.1)" stroke="#2CA01C" strokeWidth="2"/>
-      <polygon points={polygon('self')} fill="rgba(0,119,197,0.15)" stroke="#0077C5" strokeWidth="2"/>
-      {data.map((d,i) => {
-        const [x,y] = getPoint(i,5.6);
-        return <text key={i} x={x} y={y} textAnchor="middle" dominantBaseline="middle" className="text-[10px] fill-gray-600">{d.skill}</text>;
-      })}
-      {data.map((d,i) => { const [x,y]=getPoint(i,d.self); return <circle key={i} cx={x} cy={y} r="3" fill="#0077C5"/>; })}
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d={paths[name]||paths.circle}/>
     </svg>
   );
 }
 
-/* ── SVG Line Chart ── */
-function LineChart({ data, width=480, height=200 }) {
-  const pad = {l:35,r:10,t:10,b:25};
-  const w = width-pad.l-pad.r, h2 = height-pad.t-pad.b;
-  const minY=2.5, maxY=4.5, rangeY=maxY-minY;
-  const xStep = w/(data.length-1);
-  const getY = v => pad.t + h2 - ((v-minY)/rangeY)*h2;
-  const getX = i => pad.l + i*xStep;
-  const makePath = key => data.map((d,i)=>`${i===0?'M':'L'}${getX(i)},${getY(d[key])}`).join(' ');
-  const colors = {goals:'#0077C5',feedback:'#2CA01C',execution:'#6C5CE7'};
+/* ── SVG Charts ── */
+function RadarChart({ data, size=280 }) {
+  const cx=size/2,cy=size/2,r=size/2-50,n=data.length,step=(2*Math.PI)/n;
+  const pt=(i,v,mx=5)=>{const a=-Math.PI/2+i*step;return[cx+(v/mx)*r*Math.cos(a),cy+(v/mx)*r*Math.sin(a)];};
+  const poly=k=>data.map((d,i)=>pt(i,d[k]).join(',')).join(' ');
+  return (
+    <svg width={size} height={size} className="mx-auto">
+      {[1,2,3,4,5].map(v=><polygon key={v} points={data.map((_,i)=>pt(i,v).join(',')).join(' ')} fill="none" stroke="#e2e8f0" strokeWidth="0.5"/>)}
+      {data.map((_,i)=>{const[x,y]=pt(i,5);return<line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="#e2e8f0" strokeWidth="0.5"/>;})}
+      <polygon points={poly('target')} fill="none" stroke="#f97316" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.6"/>
+      <polygon points={poly('manager')} fill="rgba(16,185,129,0.08)" stroke="#10B981" strokeWidth="1.5"/>
+      <polygon points={poly('self')} fill="rgba(0,119,197,0.1)" stroke="#0077C5" strokeWidth="2"/>
+      {data.map((d,i)=>{const[x,y]=pt(i,d.self);return<circle key={'c'+i} cx={x} cy={y} r="4" fill="#0077C5" stroke="#fff" strokeWidth="2"/>;})}
+      {data.map((d,i)=>{const[x,y]=pt(i,5.8);return<text key={'t'+i} x={x} y={y} textAnchor="middle" dominantBaseline="middle" className="fill-slate-500" style={{fontSize:'11px',fontWeight:500}}>{d.skill}</text>;})}
+    </svg>
+  );
+}
 
+function LineChart({ data, width=520, height=220 }) {
+  const pad={l:40,r:15,t:15,b:30},w=width-pad.l-pad.r,h2=height-pad.t-pad.b;
+  const minY=2.5,maxY=4.5,rangeY=maxY-minY;
+  const xStep=w/(data.length-1);
+  const gy=v=>pad.t+h2-((v-minY)/rangeY)*h2;
+  const gx=i=>pad.l+i*xStep;
+  const mkPath=key=>data.map((d,i)=>`${i===0?'M':'L'}${gx(i)},${gy(d[key])}`).join(' ');
+  const mkArea=key=>`${mkPath(key)}L${gx(data.length-1)},${gy(minY)}L${gx(0)},${gy(minY)}Z`;
+  const series=[{key:'goals',color:'#0077C5',label:'Goals'},{key:'feedback',color:'#10B981',label:'Feedback'},{key:'execution',color:'#8B5CF6',label:'Execution'}];
   return (
     <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
-      {[2.5,3.0,3.5,4.0,4.5].map(v=>(
-        <g key={v}>
-          <line x1={pad.l} y1={getY(v)} x2={width-pad.r} y2={getY(v)} stroke="#f0f0f0" strokeWidth="1"/>
-          <text x={pad.l-5} y={getY(v)} textAnchor="end" dominantBaseline="middle" className="text-[10px] fill-gray-400">{v}</text>
-        </g>
-      ))}
-      {data.map((d,i)=><text key={i} x={getX(i)} y={height-5} textAnchor="middle" className="text-[10px] fill-gray-500">{d.month}</text>)}
-      {Object.keys(colors).map(key=>(
-        <g key={key}>
-          <path d={makePath(key)} fill="none" stroke={colors[key]} strokeWidth="2"/>
-          {data.map((d,i)=><circle key={i} cx={getX(i)} cy={getY(d[key])} r="3" fill={colors[key]}/>)}
-        </g>
-      ))}
+      {[2.5,3.0,3.5,4.0,4.5].map(v=><g key={v}><line x1={pad.l} y1={gy(v)} x2={width-pad.r} y2={gy(v)} stroke="#f1f5f9" strokeWidth="1"/><text x={pad.l-8} y={gy(v)} textAnchor="end" dominantBaseline="middle" style={{fontSize:'10px'}} className="fill-slate-400">{v}</text></g>)}
+      {data.map((d,i)=><text key={i} x={gx(i)} y={height-8} textAnchor="middle" style={{fontSize:'10px'}} className="fill-slate-400">{d.month}</text>)}
+      {series.map(s=><g key={s.key}><path d={mkArea(s.key)} fill={s.color} opacity="0.04"/><path d={mkPath(s.key)} fill="none" stroke={s.color} strokeWidth="2"/>{data.map((d,i)=><circle key={i} cx={gx(i)} cy={gy(d[s.key])} r="3" fill={s.color} stroke="#fff" strokeWidth="1.5"/>)}</g>)}
     </svg>
   );
 }
 
 /* ── DATA ── */
-const CRAFT_PILLARS = [
-  { id:'product_strategy', name:'Product Strategy', color:'#0077C5',
-    description:'Applies customer empathy, business acumen, and AI-first product expertise to develop a winning product vision, strategy and roadmap.',
-    levels:{
-      staff:['Expert at deepening understanding of customer problems with experimentation, predictive analytics & AI tools','Drives team alignment on target customer, connecting personas with product strategy','Defines product strategy for offering/capability to drive business growth','Navigates team dynamics to influence across partner teams','Leverages in-depth product expertise across products and AI tools to optimize roadmaps'],
-      senior_staff:['Evangelizes customer personas to influence alignment across teams','Challenges teams to deliver delightful experiences leveraging D4D + AI','Sets business outcome objectives tied to product roadmap','Demonstrates deep understanding of BU offerings to influence adjacent roadmaps'],
-      pm2:['Leverages AI-enabled research and behavioral signals to understand customer needs','Prioritizes highest impact customer problems','Has understanding of market, competitive landscape, and AI opportunities','Can articulate the customer value proposition'],
-      senior:['Identifies and prioritizes unsolved customer problems for biggest impact','Uses AI research to synthesize customer context','Leverages emerging market trends and AI transformation knowledge','Has deep knowledge of their product ecosystem'],
-    }},
-  { id:'product_execution', name:'Product Execution', color:'#2CA01C',
-    description:'Delivers customer experiences and business outcomes reimagined by AI through end to end ownership, focus on results, and critical thinking.',
-    levels:{
-      staff:['Defines high-quality E2E product experience across multiple products and domains','Demonstrates high bar for product excellence','Identifies improvements across processes, tools, AI leverage & systems','Facilitates cross functional teams using AI as accelerant','Uses data, AI methodology and domain expertise to solve complex problems'],
-      senior_staff:['Defines roadmaps with cross-team dependencies','Leads cross-functional team for high-quality E2E experiences','Drives improvements across processes, tools, AI capabilities','Plans overall input goals and delivers business results','Leverages AI to triangulate user data and competitive intelligence'],
-      pm2:['Defines problem statement, requirements, and success metrics','Demonstrates effective project management with AI tools','Executes product roadmap with guidance','Breaks down complex problems augmented by AI'],
-      senior:['Defines E2E product experience tied to success metrics','Excels at project management augmented by AI tools','Balances short & long term deliverables','Solves challenges through structured analysis and AI methodology'],
-    }},
-  { id:'technology_fluency', name:'Technology Fluency', color:'#6C5CE7',
-    description:'Leverages technical acumen, platform mindset, data-driven approach, and AI-first mindset to unlock velocity and innovation.',
-    levels:{
-      staff:['Partners with engineering to define technology approaches with AI-first mindset','Uses self-serve tooling, dashboards, vibecode prototyping, LLMs','Expands business needs into durable capability strategies including AI agents','Triangulates data across products','Trains others on emerging AI tools and capabilities'],
-      senior_staff:['Translates business requirements with engineering for AI-first technical decisions','Defines capability strategies with cross-capability AI reusability','Analyzes data with complexity to identify trends','Influences product decisions across portfolio for AI leverage','Coaches AI experimentation and evangelizes trends'],
-      pm2:['Understands components scrum teams are delivering','Balances product, data/AI and technology backlogs','Learns Intuit city map for building roadmap','Partners with data and AI science teams'],
-      senior:['Creates requirements considering technology and AI capabilities','Partners with engineering to influence backlogs','Defines features as durable capabilities for AI agents','Leverages data for roadmap prioritization','Experiments with emerging AI tools'],
-    }},
-  { id:'org_effectiveness', name:'Org Effectiveness', color:'#FF6B35',
-    description:'Drives product excellence through data-driven decision making, AI-enhanced collaboration, and clear communications.',
-    levels:{
-      staff:['Drives domain product decisions based on data and business needs','Incorporates AI into prioritization frameworks','Partners across cross-functional teams proactively','Builds shared understanding through data-driven storytelling','Accelerates cross-functional execution through AI prototyped experiences','Influences across multiple product teams when adapting to changes'],
-      senior_staff:['Drives complex strategic decisions across multiple teams','Simplifies and accelerates decision-making with AI','Skilled storyteller, communicator and negotiator','Sets clear vision and accelerates teams through AI prototyping','Proactively leads plan adaptation based on market and AI trends'],
-      pm2:['Impacts product decisions at team level based on data','Leverages AI to summarize insights for faster decisions','Uses AI productivity tools to articulate work and ideas','Enhances artifacts with AI prototyped experiences','Identifies opportunities to adapt plans based on changes'],
-      senior:['Makes product decisions across team based on data and business needs','Presents ideas with data-driven storytelling and AI tooling','Accelerates team execution through AI prototyped experiences','Drives changes when priorities shift'],
-    }},
+const PILLARS = [
+  {id:'product_strategy',name:'Product Strategy',color:'#0077C5'},
+  {id:'product_execution',name:'Product Execution',color:'#10B981'},
+  {id:'technology_fluency',name:'Technology Fluency',color:'#8B5CF6'},
+  {id:'org_effectiveness',name:'Org Effectiveness',color:'#F59E0B'},
+];
+const PILLAR_LABEL = Object.fromEntries(PILLARS.map(p=>[p.id,p.name]));
+const LEVELS = [{id:'pm2',label:'PM2 (T2)'},{id:'senior',label:'Senior PM (T3)'},{id:'staff',label:'Staff PM (T4)'},{id:'senior_staff',label:'Senior Staff PM (T5)'},{id:'principal',label:'Principal PM (T6)'}];
+
+const CRAFT_SKILLS = {
+  product_strategy: {
+    staff:['Deepens understanding of customer problems with experimentation, predictive analytics & AI tools','Drives team alignment on target customer personas with product strategy','Defines product strategy for offering/capability to drive business growth','Navigates team dynamics to influence across partner teams','Leverages product expertise across products and AI tools to optimize roadmaps'],
+    senior_staff:['Evangelizes customer personas to influence alignment across teams','Sets business outcome objectives tied to product roadmap','Demonstrates deep understanding of BU offerings to influence adjacent roadmaps'],
+  },
+  product_execution: {
+    staff:['Defines high-quality E2E product experience across multiple products','Demonstrates high bar for product excellence','Facilitates cross-functional teams using AI as accelerant','Uses data, AI methodology and domain expertise to solve complex problems'],
+    senior_staff:['Defines roadmaps with cross-team dependencies','Drives improvements across processes, tools, AI capabilities','Plans overall input goals and delivers business results'],
+  },
+  technology_fluency: {
+    staff:['Partners with engineering to define technology approaches with AI-first mindset','Uses self-serve tooling, dashboards, vibecode prototyping, LLMs','Expands business needs into durable capability strategies including AI agents','Trains others on emerging AI tools and capabilities'],
+    senior_staff:['Translates business requirements for AI-first technical decisions','Defines capability strategies with cross-capability AI reusability','Coaches AI experimentation and evangelizes trends'],
+  },
+  org_effectiveness: {
+    staff:['Drives domain product decisions based on data and business needs','Partners across cross-functional teams proactively','Builds shared understanding through data-driven storytelling','Accelerates cross-functional execution through AI prototyped experiences'],
+    senior_staff:['Drives complex strategic decisions across multiple teams','Simplifies and accelerates decision-making with AI','Skilled storyteller, communicator and negotiator'],
+  },
+};
+
+const RADAR = [{skill:'Strategy',self:3.5,manager:3.8,target:4.0},{skill:'Execution',self:4.0,manager:4.2,target:4.2},{skill:'Tech Fluency',self:3.2,manager:3.0,target:3.8},{skill:'Org Effect.',self:3.5,manager:3.3,target:4.0}];
+const TIMELINE = [{month:'Sep',goals:3.2,feedback:3.0,execution:3.5},{month:'Oct',goals:3.3,feedback:3.2,execution:3.6},{month:'Nov',goals:3.5,feedback:3.5,execution:3.7},{month:'Dec',goals:3.6,feedback:3.4,execution:3.8},{month:'Jan',goals:3.7,feedback:3.6,execution:4.0},{month:'Feb',goals:3.8,feedback:3.7,execution:4.1}];
+const ASSESS = {product_strategy:{self:3.5,manager:3.8,target:4.0},product_execution:{self:4.0,manager:4.2,target:4.2},technology_fluency:{self:3.2,manager:3.0,target:3.8},org_effectiveness:{self:3.5,manager:3.3,target:4.0}};
+
+const GOALS = [
+  {id:1,title:'Ship AI-powered onboarding for SMB segment to GA',status:'on_track',progress:72,pillar:'product_execution',due:'Jun 30, 2026',krs:[{l:'Reduce time-to-value from 14 to ≤8 days',p:65},{l:'CSAT ≥ 4.5 in post-onboarding survey (n=500+)',p:80},{l:'Roll out to 100% SMB tier users',p:70}]},
+  {id:2,title:'Author 3-year AI platform capability strategy',status:'on_track',progress:55,pillar:'product_strategy',due:'Apr 15, 2026',krs:[{l:'Complete competitive analysis with 8+ vendors',p:90},{l:'Secure VP alignment on investment thesis',p:40},{l:'Define Year 1 milestones with eng commitment',p:35}]},
+  {id:3,title:'Improve cross-team data pipeline reliability to 99.9%',status:'at_risk',progress:38,pillar:'technology_fluency',due:'May 30, 2026',krs:[{l:'Map all 12 failure points with RCA docs',p:80},{l:'Implement automated monitoring + alerting',p:30},{l:'Achieve 99.9% uptime for 30 consecutive days',p:5}]},
+  {id:4,title:'Establish PM mentorship program and develop 2 junior PMs',status:'on_track',progress:60,pillar:'org_effectiveness',due:'Jul 31, 2026',krs:[{l:'Weekly 1:1 coaching sessions (24/24 target)',p:100},{l:'Guide PM1 through beta launch by May',p:45},{l:'Prepare PM2 for GA readiness review',p:35}]},
 ];
 
-const LEVELS = [{id:'pm2',label:'PM2 (T2)'},{id:'senior',label:'Senior PM (T3)'},{id:'staff',label:'Staff PM (T4) / M2'},{id:'senior_staff',label:'Senior Staff PM (T5)'},{id:'principal',label:'Principal PM (T6) / M3'},{id:'distinguished',label:'Distinguished (T7) / Director (M4)'},{id:'vp',label:'VP (M6)'}];
-
-const MOCK_GOALS = [
-  {id:1,title:'Launch AI-powered onboarding flow for SMB segment',status:'on_track',progress:72,pillar:'product_execution',due:'2026-06-30',krs:[{l:'Reduce time-to-value by 40%',p:65},{l:'Achieve 4.5+ CSAT',p:80},{l:'Ship to 100% SMB users',p:70}]},
-  {id:2,title:'Define 3-year platform capability strategy for AI agents',status:'on_track',progress:55,pillar:'product_strategy',due:'2026-04-15',krs:[{l:'Complete competitive analysis',p:90},{l:'Get VP alignment',p:40},{l:'Define year 1 milestones',p:35}]},
-  {id:3,title:'Improve cross-team data pipeline reliability to 99.9%',status:'at_risk',progress:38,pillar:'technology_fluency',due:'2026-05-30',krs:[{l:'Identify failure points',p:80},{l:'Implement monitoring',p:30},{l:'Achieve 99.9% uptime',p:5}]},
-  {id:4,title:'Mentor 2 junior PMs through first major launch',status:'on_track',progress:60,pillar:'org_effectiveness',due:'2026-07-31',krs:[{l:'Weekly coaching sessions',p:100},{l:'PM1 beta launch support',p:45},{l:'PM2 GA readiness',p:35}]},
+const FEEDBACK = [
+  {id:1,from:'Sarah Kim',role:'Engineering Manager',date:'Feb 15, 2026',type:'peer',summary:'Your dependency mapping on the AI agent framework prevented a 2-week sprint delay. The spec was one of the clearest I\'ve seen — eng started immediately.',sentiment:'positive',pillar:'product_execution'},
+  {id:2,from:'Raj Patel',role:'VP, Platform',date:'Feb 8, 2026',type:'leadership',summary:'The platform strategy doc is strong. Push to quantify business impact more — connect each capability to specific revenue or efficiency metrics before the board review.',sentiment:'constructive',pillar:'product_strategy'},
+  {id:3,from:'Lisa Chen',role:'Staff Designer',date:'Jan 22, 2026',type:'peer',summary:'On the onboarding redesign: design decisions were shared late in the sprint, which compressed QA. Earlier alignment on visual direction would help the team.',sentiment:'constructive',pillar:'org_effectiveness'},
+  {id:4,from:'Marcus Johnson',role:'Director, Product',date:'Jan 10, 2026',type:'leadership',summary:'Consistently strong execution this quarter. The SMB onboarding metrics are impressive. Next: present your AI strategy at PM All-Hands for broader buy-in.',sentiment:'positive',pillar:'product_strategy'},
 ];
-
-const MOCK_FEEDBACK = [
-  {id:1,from:'Sarah Kim (Manager)',date:'Feb 15',type:'manager',summary:'Exceptional execution on SMB onboarding. Strong bias to action, minimal friction from ideation to delivery.',sentiment:'positive'},
-  {id:2,from:'James Liu (Eng)',date:'Feb 1',type:'peer',summary:'Great collaboration on AI agent framework tech requirements. Impressive platform constraint understanding.',sentiment:'positive'},
-  {id:3,from:'Priya Patel (Design)',date:'Jan 20',type:'peer',summary:'Stakeholder communication could improve. Some design decisions shared late, impacting sprint planning.',sentiment:'constructive'},
-  {id:4,from:'Mark Johnson (Skip)',date:'Jan 10',type:'leadership',summary:'Strong strategic thinking on 3-year platform vision. Push for more data-backed storytelling with senior leaders.',sentiment:'positive'},
-];
-
-const TIMELINE = [{month:'Sep',goals:3.2,feedback:3.0,execution:3.5},{month:'Oct',goals:3.4,feedback:3.2,execution:3.6},{month:'Nov',goals:3.5,feedback:3.5,execution:3.7},{month:'Dec',goals:3.6,feedback:3.4,execution:3.8},{month:'Jan',goals:3.7,feedback:3.6,execution:4.0},{month:'Feb',goals:3.8,feedback:3.7,execution:4.1}];
-const RADAR_DATA = [{skill:'Strategy',self:3.5,manager:3.8,target:4.0},{skill:'Execution',self:4.0,manager:4.2,target:4.0},{skill:'Tech Fluency',self:3.2,manager:3.0,target:3.5},{skill:'Org Effect.',self:3.5,manager:3.3,target:4.0}];
-const SKILL_ASSESSMENT = {product_strategy:{self:3.5,manager:3.8,target:4.0},product_execution:{self:4.0,manager:4.2,target:4.0},technology_fluency:{self:3.2,manager:3.0,target:3.5},org_effectiveness:{self:3.5,manager:3.3,target:4.0}};
-const PILLAR_NAMES = {product_strategy:'Product Strategy',product_execution:'Product Execution',technology_fluency:'Technology Fluency',org_effectiveness:'Org Effectiveness'};
 
 const CHECKIN_TOPICS = [
-  {priority:'high',topic:'SMB onboarding: Discuss beta feedback and plan for GA',source:'Goal Progress'},
-  {priority:'high',topic:'Data pipeline reliability at-risk \u2014 need resource discussion',source:'Risk Signal'},
-  {priority:'medium',topic:"Follow up on Priya's feedback re: stakeholder communication",source:'Feedback Theme'},
-  {priority:'medium',topic:'Platform strategy doc: VP alignment prep',source:'Goal Progress'},
-  {priority:'low',topic:'Junior PM mentoring progress check',source:'Development Goal'},
+  {priority:'high',topic:'Data pipeline at 38% — discuss resource allocation and timeline',source:'Goal Risk Signal'},
+  {priority:'high',topic:'SMB onboarding GA: review beta CSAT (4.3 avg), plan push to 4.5',source:'Goal Progress'},
+  {priority:'medium',topic:'Address Lisa\'s feedback: establish earlier design sync cadence',source:'Feedback Pattern'},
+  {priority:'medium',topic:'Platform strategy: prep for VP board review — add revenue metrics',source:'Feedback Action'},
+  {priority:'low',topic:'PM mentorship: PM1 beta launch on track for May',source:'Development Goal'},
 ];
 
 const PROMO_EVIDENCE = [
-  {title:'SMB AI Onboarding \u2014 GA Launch',date:'Jan 2026',impact:'35% time-to-value reduction for 50K users',pillar:'Product Execution',score:90},
-  {title:'Platform Capability Framework v2',date:'Nov 2025',impact:'Enabled 3 teams on shared AI infra',pillar:'Technology Fluency',score:75},
-  {title:'3-Year AI Platform Strategy',date:'Feb 2026',impact:'VP-approved, guiding $10M+ investment',pillar:'Product Strategy',score:82},
-  {title:'Cross-team collaboration recognition',date:'Ongoing',impact:'5 peer feedback mentions',pillar:'Product Execution',score:88},
-  {title:'Mentored 2 junior PMs',date:'FY26',impact:'Both mentees promoted',pillar:'Org Effectiveness',score:70},
+  {title:'SMB AI Onboarding — GA Launch',date:'Jan 2026',impact:'35% time-to-value reduction, 50K users',pillar:'product_execution',score:90},
+  {title:'3-Year AI Platform Strategy',date:'Feb 2026',impact:'VP-approved, $10M+ investment roadmap',pillar:'product_strategy',score:82},
+  {title:'Platform Capability Framework v2',date:'Nov 2025',impact:'3 teams building on shared AI infra',pillar:'technology_fluency',score:75},
+  {title:'Cross-team dependency resolution',date:'Ongoing',impact:'5 peer recognition mentions in Q1',pillar:'product_execution',score:88},
+  {title:'Junior PM mentorship program',date:'FY26',impact:'2 mentees on track for promotion',pillar:'org_effectiveness',score:70},
 ];
 
-const RUBRIC_MATCH = [
-  {skill:'Defines roadmaps with cross-team dependencies',dem:true,ev:'Platform Strategy Doc, SMB Launch'},
+const RUBRIC = [
+  {skill:'Defines roadmaps with cross-team dependencies',dem:true,ev:'Platform Strategy Doc, SMB Launch roadmap'},
   {skill:'Drives improvements across processes, tools, AI capabilities',dem:true,ev:'Capability Framework v2'},
-  {skill:'Plans overall input goals and delivers business results',dem:true,ev:'Q1-Q2 goal attainment at 85%'},
-  {skill:'Evangelizes customer personas to influence alignment',dem:false,ev:'Need more cross-BU examples'},
-  {skill:'Sets business outcome objectives tied to roadmap',dem:false,ev:'Need P&L-linked goal examples'},
-  {skill:'Simplifies decision-making with AI',dem:'partial',ev:'Some examples, needs more visibility'},
+  {skill:'Plans overall input goals and delivers business results',dem:true,ev:'Q1-Q2 attainment at 85%'},
+  {skill:'Evangelizes customer personas to influence alignment',dem:false,ev:'Need cross-BU presentation examples'},
+  {skill:'Sets business outcome objectives tied to roadmap',dem:false,ev:'Need P&L-linked metrics'},
+  {skill:'Simplifies decision-making with AI',dem:'partial',ev:'Some adoption, needs broader visibility'},
 ];
 
 const DEV_RECS = [
-  {type:'course',title:'AI Product Strategy Masterclass',provider:'Degreed',priority:'high'},
-  {type:'stretch',title:'Lead cross-BU architecture review for Q3',priority:'high'},
-  {type:'mentor',title:'Connect with VP of Platform for coaching',priority:'medium'},
-  {type:'course',title:'Influencing Without Authority',provider:'Degreed',priority:'medium'},
-  {type:'project',title:'Volunteer for AI Hackathon judging',priority:'low'},
+  {type:'course',title:'AI Product Strategy Masterclass',provider:'Degreed',priority:'high',reason:'Closes Tech Fluency gap'},
+  {type:'stretch',title:'Lead Q3 cross-BU architecture review',priority:'high',reason:'Builds Org Effectiveness evidence'},
+  {type:'project',title:'Present at PM All-Hands on AI strategy',priority:'high',reason:'Builds visibility for promo case'},
+  {type:'mentor',title:'Monthly coaching with VP Raj',priority:'medium',reason:'Strategic sponsorship'},
+  {type:'course',title:'Influencing Without Authority',provider:'Degreed',priority:'medium',reason:'Cross-team influence'},
 ];
 
-/* ── ICONS (inline SVG) ── */
-function Ico({name,size=18,cls=''}) {
-  const s=size, p={strokeWidth:2,strokeLinecap:'round',strokeLinejoin:'round',fill:'none',stroke:'currentColor'};
-  const icons={
-    dashboard:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>,
-    target:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
-    message:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
-    calendar:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-    layers:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>,
-    award:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>,
-    trending:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
-    bot:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,
-    sparkle:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"/></svg>,
-    check:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
-    alert:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
-    send:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
-    x:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-    user:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-    briefcase:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>,
-    zap:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
-    shield:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
-    lightbulb:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>,
-    book:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
-    circle:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><circle cx="12" cy="12" r="10"/></svg>,
-    file:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
-    down:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><polyline points="6 9 12 15 18 9"/></svg>,
-    up:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><polyline points="18 15 12 9 6 15"/></svg>,
-    arrow:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
-    thumbsUp:<svg width={s} height={s} viewBox="0 0 24 24" {...p}><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>,
-  };
-  return <span className={cls}>{icons[name]||icons.circle}</span>;
+/* ── COMPONENTS ── */
+const Badge = ({children,color='blue',className=''}) => {
+  const c={blue:'bg-brand-50 text-brand-500',green:'bg-success-50 text-success-700',yellow:'bg-warn-50 text-warn-700',red:'bg-danger-50 text-danger-500',purple:'bg-violet-50 text-violet-600',slate:'bg-slate-100 text-slate-600'};
+  return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${c[color]||c.blue} ${className}`}>{children}</span>;
+};
+
+function AiOutput({text, loading, error, onRefine, label='AI-Generated'}) {
+  if (error) return <div className="mt-4 p-4 rounded-xl bg-danger-50 border border-red-200"><p className="text-sm text-red-700">{error}</p></div>;
+  if (loading) return <div className="mt-4 p-5 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3"><div className="flex gap-1.5">{[0,1,2].map(i=><span key={i} className="w-2 h-2 bg-brand-500 rounded-full typing-dot"/>)}</div><p className="text-sm text-slate-500">Thinking...</p></div>;
+  if (!text) return null;
+  return (
+    <div className="mt-4 p-5 rounded-xl bg-gradient-to-br from-brand-50 to-violet-50 border border-brand-100">
+      <div className="flex items-center gap-2 mb-2"><I name="spark" size={14} className="text-brand-500"/><p className="text-xs font-semibold text-brand-600">{label}</p></div>
+      <div className="text-sm text-slate-700 whitespace-pre-line leading-relaxed markdown-content">{text}</div>
+      {onRefine && <div className="flex gap-2 mt-4">
+        <button onClick={()=>onRefine('accept')} className="bg-brand-500 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-brand-600 transition-colors">Accept</button>
+        <button onClick={()=>onRefine('refine')} className="bg-white text-slate-600 px-4 py-2 rounded-lg text-xs font-medium border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-1.5"><I name="refresh" size={12}/> Refine</button>
+      </div>}
+    </div>
+  );
 }
 
-/* ── Pill / Button helpers ── */
-const Pill = ({children,color='blue'}) => {
-  const c={blue:'bg-blue-50 text-blue-700',green:'bg-emerald-50 text-emerald-700',yellow:'bg-amber-50 text-amber-700',red:'bg-red-50 text-red-700',purple:'bg-purple-50 text-purple-700',pink:'bg-pink-50 text-pink-700'};
-  return <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium ${c[color]||c.blue}`}>{children}</span>;
-};
-const Btn = ({children,primary,cls='',onClick}) => <button onClick={onClick} className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-1.5 ${primary?'bg-intuit-blue text-white hover:bg-blue-700':'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'} ${cls}`}>{children}</button>;
-const Card = ({children,cls=''}) => <div className={`bg-white rounded-xl border border-gray-200 p-4 ${cls}`}>{children}</div>;
-
-/* ── NAV ── */
-const NAV=[{id:'dashboard',icon:'dashboard',label:'Dashboard'},{id:'goals',icon:'target',label:'Goals Coach'},{id:'feedback',icon:'message',label:'Feedback Coach'},{id:'checkin',icon:'calendar',label:'1:1 Prep'},{id:'skills',icon:'layers',label:'Craft Skills'},{id:'promotion',icon:'award',label:'Promotion Readiness'},{id:'development',icon:'trending',label:'Development Plan'}];
-
-function Sidebar({page,setPage,persona,setPersona}) {
+/* ── API KEY SETUP ── */
+function ApiKeySetup({onSave}) {
+  const [key,setKey]=useState('');
   return (
-    <aside className="w-60 bg-intuit-navy text-white flex flex-col h-screen shrink-0">
-      <div className="p-4 border-b border-white/10">
-        <div className="flex items-center gap-2 mb-3"><div className="w-8 h-8 rounded-lg bg-intuit-blue flex items-center justify-center"><Ico name="bot" size={16}/></div><div><p className="font-bold text-sm leading-tight">PM&D Agent</p><p className="text-[10px] text-blue-300">Performance & Growth</p></div></div>
-        <div className="flex bg-white/10 rounded-lg p-0.5">
-          <button onClick={()=>setPersona('employee')} className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs font-medium transition-all ${persona==='employee'?'bg-intuit-blue text-white shadow':'text-blue-200 hover:text-white'}`}><Ico name="user" size={12}/> Employee</button>
-          <button onClick={()=>setPersona('manager')} className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-xs font-medium transition-all ${persona==='manager'?'bg-intuit-blue text-white shadow':'text-blue-200 hover:text-white'}`}><Ico name="briefcase" size={12}/> Manager</button>
+    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[100] backdrop-blur-sm">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-500 flex items-center justify-center"><I name="key" size={20}/></div>
+          <div><h2 className="font-bold text-lg">Connect to Claude AI</h2><p className="text-sm text-slate-500">Enter your Anthropic API key to enable AI features</p></div>
+        </div>
+        <input type="password" placeholder="sk-ant-..." className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm bg-slate-50/50 mb-3 placeholder:text-slate-400" value={key} onChange={e=>setKey(e.target.value)} onKeyDown={e=>e.key==='Enter'&&key.trim()&&onSave(key.trim())}/>
+        <p className="text-[11px] text-slate-400 mb-4">Stored locally in your browser. Never sent anywhere except the Anthropic API.</p>
+        <div className="flex gap-2">
+          <button onClick={()=>key.trim()&&onSave(key.trim())} className="flex-1 bg-brand-500 text-white py-2.5 rounded-lg font-semibold text-sm hover:bg-brand-600 transition-colors">Connect</button>
+          <button onClick={()=>onSave('SKIP')} className="px-4 py-2.5 rounded-lg text-sm font-medium text-slate-500 border border-slate-200 hover:bg-slate-50">Skip (demo mode)</button>
         </div>
       </div>
-      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">{NAV.map(n=><button key={n.id} onClick={()=>setPage(n.id)} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-left transition-all ${page===n.id?'bg-intuit-blue/20 text-white font-medium':'text-blue-200 hover:bg-white/5 hover:text-white'}`}><Ico name={n.icon} size={16}/> {n.label}</button>)}</nav>
-      <div className="p-3 border-t border-white/10"><div className="flex items-center gap-2"><div className="w-7 h-7 rounded-full bg-intuit-blue/30 flex items-center justify-center text-[10px] font-bold">AC</div><div><p className="text-xs font-medium">Alex Chen</p><p className="text-[10px] text-blue-300">Staff PM (T4)</p></div></div></div>
+    </div>
+  );
+}
+
+/* ── useAI Hook ── */
+function useAI() {
+  const [loading,setLoading]=useState(false);
+  const [result,setResult]=useState('');
+  const [error,setError]=useState('');
+
+  const run = useCallback(async (messages, systemOverride) => {
+    setLoading(true); setError(''); setResult('');
+    try {
+      const text = await callClaude(messages, systemOverride);
+      setResult(text);
+      return text;
+    } catch(e) {
+      if (e.message === 'NO_KEY') {
+        setError('No API key configured. Go to settings to add your Anthropic API key.');
+      } else {
+        setError(e.message);
+      }
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const reset = useCallback(() => { setResult(''); setError(''); }, []);
+  return { loading, result, error, run, reset, setResult };
+}
+
+/* ── NAV ── */
+const NAV = [
+  {id:'dashboard',icon:'grid',label:'Dashboard'},
+  {id:'goals',icon:'target',label:'Goals Coach'},
+  {id:'feedback',icon:'msg',label:'Feedback Coach'},
+  {id:'checkin',icon:'cal',label:'1:1 Prep'},
+  {id:'skills',icon:'layers',label:'Craft Skills'},
+  {id:'promotion',icon:'award',label:'Promotion'},
+  {id:'development',icon:'trend',label:'Development'},
+];
+
+function Sidebar({page,setPage,persona,setPersona,onSettings}) {
+  return (
+    <aside className="w-[232px] bg-brand-900 text-white flex flex-col h-screen shrink-0">
+      <div className="p-5 pb-4">
+        <div className="flex items-center gap-2.5 mb-5">
+          <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center"><I name="spark" size={16}/></div>
+          <div><p className="font-bold text-[13px] leading-tight tracking-tight">PM&D Growth Agent</p><p className="text-[10px] text-blue-300/70 mt-0.5">Powered by Claude AI</p></div>
+        </div>
+        <div className="flex bg-white/[0.08] rounded-lg p-0.5">
+          <button onClick={()=>setPersona('employee')} className={`flex-1 py-1.5 rounded-md text-[11px] font-medium transition-all ${persona==='employee'?'bg-brand-500 text-white shadow-lg shadow-brand-500/30':'text-blue-200/60 hover:text-white'}`}>Employee</button>
+          <button onClick={()=>setPersona('manager')} className={`flex-1 py-1.5 rounded-md text-[11px] font-medium transition-all ${persona==='manager'?'bg-brand-500 text-white shadow-lg shadow-brand-500/30':'text-blue-200/60 hover:text-white'}`}>Manager</button>
+        </div>
+      </div>
+      <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
+        {NAV.map(n=><button key={n.id} onClick={()=>setPage(n.id)} className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] text-left transition-all ${page===n.id?'bg-white/[0.12] text-white font-semibold':'text-blue-200/50 hover:bg-white/[0.06] hover:text-blue-100'}`}><I name={n.icon} size={16}/> {n.label}</button>)}
+      </nav>
+      <div className="px-3 pb-2"><button onClick={onSettings} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] text-blue-200/40 hover:text-blue-100 hover:bg-white/[0.06] transition-all"><I name="settings" size={14}/> API Settings</button></div>
+      <div className="p-4 border-t border-white/[0.06]">
+        <div className="flex items-center gap-2.5"><div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center text-[11px] font-bold">AC</div><div><p className="text-[12px] font-semibold">Alex Chen</p><p className="text-[10px] text-blue-300/50">Staff PM (T4) · Platform</p></div></div>
+      </div>
     </aside>
   );
 }
 
 /* ── DASHBOARD ── */
 function Dashboard({persona}) {
-  const agents=[{name:'Goals Coach',desc:'Generates goals aligned to craft skills.',color:'#0077C5'},{name:'Feedback Coach',desc:'SBI feedback with bias detection.',color:'#2CA01C'},{name:'Check-in Assistant',desc:'Auto agendas from goal & feedback data.',color:'#6C5CE7'},{name:'Promotion Coach',desc:'Evidence assembly mapped to rubric.',color:'#E84393'}];
+  const stats = [
+    {label:'Active Goals',value:'4',sub:'3 on track · 1 needs attention',icon:'target',color:'text-brand-500',bg:'bg-brand-50'},
+    {label:'Feedback Items',value:'4',sub:'2 positive · 2 constructive',icon:'msg',color:'text-success-500',bg:'bg-success-50'},
+    {label:'Promo Readiness',value:'68%',sub:'Senior Staff PM (T5)',icon:'award',color:'text-violet-500',bg:'bg-violet-50',progress:68},
+    {label:'Next 1:1',value:'3 days',sub:'Thu Mar 7 · Sarah Kim',icon:'cal',color:'text-warn-500',bg:'bg-warn-50'},
+  ];
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-5 fade-in">
-      <div className="flex items-start justify-between"><div><h1 className="text-2xl font-bold">{persona==='employee'?'My Performance Dashboard':'Team Performance Dashboard'}</h1><p className="text-gray-500 text-sm mt-1">{persona==='employee'?"Welcome back, Alex. Here's your performance snapshot.":'AI-powered insights across your team.'}</p></div><Pill color="blue"><Ico name="zap" size={11}/> AI Active</Pill></div>
+    <div className="p-8 max-w-6xl mx-auto space-y-8">
+      <div className="fade-up">
+        <h1 className="text-[28px] font-extrabold tracking-tight text-slate-900">{persona==='employee'?'Good afternoon, Alex':'Team Overview'}</h1>
+        <p className="text-slate-400 text-[15px] mt-1 font-light">{persona==='employee'?"Here's where you stand this quarter.":'AI-powered insights across your direct reports.'}</p>
+      </div>
       <div className="grid grid-cols-4 gap-4">
-        {[{icon:'target',bg:'bg-blue-50 text-intuit-blue',val:4,lbl:'Active Goals',sub:'3 on track, 1 at risk'},{icon:'message',bg:'bg-emerald-50 text-emerald-600',val:4,lbl:'Feedback Items',sub:'3 positive, 1 constructive'},{icon:'award',bg:'bg-purple-50 text-purple-600',val:'68%',lbl:'Promo Readiness',sub:null},{icon:'calendar',bg:'bg-amber-50 text-amber-600',val:3,lbl:'Days to 1:1',sub:'View prep \u2192'}].map((s,i)=>(
-          <Card key={i}><div className="flex items-center gap-3 mb-1"><div className={`w-9 h-9 rounded-lg flex items-center justify-center ${s.bg}`}><Ico name={s.icon} size={18}/></div><div><p className="text-2xl font-bold">{s.val}</p><p className="text-[11px] text-gray-500">{s.lbl}</p></div></div>{s.sub?<p className="text-xs text-gray-500 mt-1">{s.sub}</p>:<div className="w-full bg-gray-100 rounded-full h-1.5 mt-2"><div className="bg-purple-500 h-1.5 rounded-full" style={{width:'68%'}}/></div>}</Card>
+        {stats.map((s,i)=>(
+          <div key={i} className={`fade-up fade-up-d${i+1} bg-white rounded-xl border border-slate-200/60 p-4 hover:shadow-md transition-all cursor-pointer`}>
+            <div className="flex items-center justify-between mb-3"><div className={`w-9 h-9 rounded-lg ${s.bg} ${s.color} flex items-center justify-center`}><I name={s.icon} size={18}/></div></div>
+            {s.progress ? <><div className="w-full bg-slate-100 rounded-full h-2 mb-1"><div className="bg-gradient-to-r from-violet-500 to-purple-500 h-2 rounded-full" style={{width:`${s.progress}%`}}/></div><p className="text-xl font-bold text-slate-900">{s.value}</p></> : <p className="text-2xl font-bold text-slate-900">{s.value}</p>}
+            <p className="text-[12px] font-semibold text-slate-700 mt-1">{s.label}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">{s.sub}</p>
+          </div>
         ))}
       </div>
       <div className="grid grid-cols-2 gap-5">
-        <Card><h3 className="font-semibold text-sm mb-3">Craft Skills Radar</h3><RadarChart data={RADAR_DATA} size={260}/><div className="flex justify-center gap-4 mt-1"><span className="flex items-center gap-1 text-[11px]"><span className="w-3 h-0.5 bg-intuit-blue inline-block"/> Self</span><span className="flex items-center gap-1 text-[11px]"><span className="w-3 h-0.5 bg-intuit-green inline-block"/> Manager</span><span className="flex items-center gap-1 text-[11px]"><span className="w-3 h-0.5 bg-intuit-warm inline-block"/> Target</span></div></Card>
-        <Card><h3 className="font-semibold text-sm mb-3">Performance Trend (6 months)</h3><LineChart data={TIMELINE}/><div className="flex justify-center gap-4 mt-1"><span className="flex items-center gap-1 text-[11px]"><span className="w-3 h-0.5 bg-intuit-blue inline-block"/> Goals</span><span className="flex items-center gap-1 text-[11px]"><span className="w-3 h-0.5 bg-emerald-500 inline-block"/> Feedback</span><span className="flex items-center gap-1 text-[11px]"><span className="w-3 h-0.5 bg-purple-500 inline-block"/> Execution</span></div></Card>
+        <div className="bg-white rounded-xl border border-slate-200/60 p-5 fade-up fade-up-d2">
+          <h3 className="font-semibold text-[13px] text-slate-700 mb-1">Craft Skills Radar</h3>
+          <p className="text-[11px] text-slate-400 mb-2">Self vs. Manager vs. Target (T5)</p>
+          <RadarChart data={RADAR} size={260}/>
+          <div className="flex justify-center gap-5 mt-2">{[{c:'#0077C5',l:'Self'},{c:'#10B981',l:'Manager'},{c:'#f97316',l:'Target'}].map(x=><span key={x.l} className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="w-2.5 h-0.5 rounded-full inline-block" style={{backgroundColor:x.c}}/>{x.l}</span>)}</div>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200/60 p-5 fade-up fade-up-d3">
+          <h3 className="font-semibold text-[13px] text-slate-700 mb-1">Growth Trend</h3>
+          <p className="text-[11px] text-slate-400 mb-3">6-month performance trajectory</p>
+          <LineChart data={TIMELINE}/>
+          <div className="flex justify-center gap-5 mt-2">{[{c:'#0077C5',l:'Goals'},{c:'#10B981',l:'Feedback'},{c:'#8B5CF6',l:'Execution'}].map(x=><span key={x.l} className="flex items-center gap-1.5 text-[11px] text-slate-500"><span className="w-2.5 h-0.5 rounded-full inline-block" style={{backgroundColor:x.c}}/>{x.l}</span>)}</div>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-5">
-        <Card><h3 className="font-semibold text-sm mb-3">Active Goals</h3><div className="space-y-2">{MOCK_GOALS.map(g=><div key={g.id} className="flex items-start gap-2.5 p-2.5 rounded-lg bg-gray-50"><span className={`mt-0.5 ${g.status==='on_track'?'text-emerald-500':'text-amber-500'}`}><Ico name={g.status==='on_track'?'check':'alert'} size={15}/></span><div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{g.title}</p><div className="flex items-center gap-2 mt-1"><div className="flex-1 bg-gray-200 rounded-full h-1.5"><div className={`h-1.5 rounded-full ${g.status==='at_risk'?'bg-amber-500':'bg-intuit-blue'}`} style={{width:`${g.progress}%`}}/></div><span className="text-[11px] text-gray-500">{g.progress}%</span></div></div></div>)}</div></Card>
-        <Card><h3 className="font-semibold text-sm mb-3">Recent Feedback</h3><div className="space-y-2">{MOCK_FEEDBACK.map(f=><div key={f.id} className="p-2.5 rounded-lg bg-gray-50"><div className="flex items-center justify-between mb-1"><p className="text-xs font-medium">{f.from}</p><Pill color={f.sentiment==='positive'?'green':'purple'}>{f.sentiment}</Pill></div><p className="text-xs text-gray-600 line-clamp-2">{f.summary}</p></div>)}</div></Card>
+        <div className="bg-white rounded-xl border border-slate-200/60 p-5 fade-up fade-up-d3">
+          <h3 className="font-semibold text-[13px] text-slate-700 mb-3">Goal Progress</h3>
+          <div className="space-y-3">{GOALS.map(g=><div key={g.id} className="flex items-start gap-3"><div className={`w-1.5 h-1.5 rounded-full mt-2 shrink-0 ${g.status==='on_track'?'bg-success-500':'bg-warn-500'}`}/><div className="flex-1 min-w-0"><p className="text-[13px] font-medium text-slate-800 truncate">{g.title}</p><div className="flex items-center gap-2 mt-1.5"><div className="flex-1 bg-slate-100 rounded-full h-1.5"><div className={`h-1.5 rounded-full ${g.status==='at_risk'?'bg-warn-500':'bg-brand-500'}`} style={{width:`${g.progress}%`}}/></div><span className="text-[11px] text-slate-400 tabular-nums">{g.progress}%</span></div></div></div>)}</div>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200/60 p-5 fade-up fade-up-d4">
+          <h3 className="font-semibold text-[13px] text-slate-700 mb-3">Recent Feedback</h3>
+          <div className="space-y-3">{FEEDBACK.slice(0,3).map(f=><div key={f.id}><div className="flex items-center justify-between mb-1"><p className="text-[12px] font-semibold text-slate-700">{f.from}</p><Badge color={f.sentiment==='positive'?'green':'yellow'}>{f.sentiment}</Badge></div><p className="text-[12px] text-slate-500 leading-relaxed line-clamp-2">{f.summary}</p></div>)}</div>
+        </div>
       </div>
-      <div><h3 className="font-semibold text-sm mb-3">Your AI Agents</h3><div className="grid grid-cols-4 gap-3">{agents.map((a,i)=><Card key={i} cls="hover:shadow-lg hover:border-intuit-blue/30 transition-all cursor-pointer"><div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2" style={{backgroundColor:`${a.color}15`}}><div className="w-3 h-3 rounded-full" style={{backgroundColor:a.color}}/></div><p className="text-sm font-medium">{a.name}</p><p className="text-[11px] text-gray-500 mt-0.5">{a.desc}</p></Card>)}</div></div>
     </div>
   );
 }
@@ -280,59 +415,143 @@ function Dashboard({persona}) {
 function GoalsCoach() {
   const [exp,setExp]=useState(null);
   const [draft,setDraft]=useState('');
-  const [aiOut,setAiOut]=useState('');
-  const gen=()=>{if(!draft.trim())return;const t="Based on your Staff PM (T4) role and craft skill gaps in Technology Fluency:\n\n\"Establish AI agent capability framework and lead cross-team adoption, achieving 3+ production deployments by Q4 FY26\"\n\nAligned Craft Skills:\n\u2022 Technology Fluency: Partners with engineering with AI-first mindset\n\u2022 Product Strategy: Defines product strategy for capability growth\n\nSuggested Key Results:\n1. Complete framework docs by April 15\n2. Deploy 3 AI agents to production by July 31\n3. 90%+ stakeholder satisfaction on usability\n\nThis addresses your promotion gap in Tech Fluency while leveraging your Product Execution strength.";let i=0;setAiOut('');const iv=setInterval(()=>{setAiOut(t.slice(0,i));i+=4;if(i>t.length){setAiOut(t);clearInterval(iv);}},12);};
+  const ai = useAI();
+
+  const gen = async () => {
+    if(!draft.trim()) return;
+    await ai.run([{role:'user',content:`I'm a Staff PM (T4) working toward Senior Staff PM (T5). Help me create a well-structured goal based on this idea: "${draft}"\n\nFormat the goal with:\n1. A clear, measurable goal statement\n2. Which craft skills it aligns to (Product Strategy, Product Execution, Technology Fluency, or Org Effectiveness) and the specific rubric behavior\n3. 3 specific, measurable key results with target dates\n4. How this helps my promotion case\n\nBe specific and actionable.`}],
+    SYSTEM_PROMPT);
+  };
+
+  const handleRefine = async (action) => {
+    if (action === 'accept') { ai.reset(); setDraft(''); return; }
+    await ai.run([
+      {role:'user',content:`Create a goal based on: "${draft}"`},
+      {role:'assistant',content:ai.result},
+      {role:'user',content:'Please refine this goal. Make it more specific, add sharper metrics, and strengthen the craft skills alignment. Also suggest potential risks and mitigation strategies.'}
+    ], SYSTEM_PROMPT);
+  };
+
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-5 fade-in">
-      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Ico name="target" size={22} cls="text-intuit-blue"/> Goals Coach</h1><p className="text-gray-500 text-sm mt-1">AI-powered goal creation aligned to craft skills and business outcomes.</p></div>
-      <Card><div className="flex items-center gap-2 mb-3"><Ico name="sparkle" size={14} cls="text-intuit-blue"/><h2 className="font-semibold text-sm">Draft a New Goal with AI</h2></div><div className="flex gap-2"><input type="text" placeholder="Describe what you want to accomplish..." className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-intuit-blue/30" value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>e.key==='Enter'&&gen()}/><Btn primary onClick={gen}><Ico name="sparkle" size={14}/> Generate</Btn></div>
-        {aiOut&&<div className="mt-4 p-4 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-100"><div className="flex items-center gap-2 mb-2"><Ico name="lightbulb" size={14} cls="text-intuit-blue"/><p className="text-xs font-semibold text-intuit-blue">AI Recommendation</p></div><div className="text-sm text-gray-800 whitespace-pre-line leading-relaxed">{aiOut}</div><div className="flex gap-2 mt-3"><Btn primary cls="text-xs">Accept & Add</Btn><Btn cls="text-xs">Refine</Btn></div></div>}
-      </Card>
-      <div><h2 className="font-semibold text-sm mb-3">Active Goals ({MOCK_GOALS.length})</h2><div className="space-y-3">{MOCK_GOALS.map(g=><Card key={g.id}><div className="flex items-start gap-3 cursor-pointer" onClick={()=>setExp(exp===g.id?null:g.id)}><span className={`mt-0.5 ${g.status==='on_track'?'text-emerald-500':'text-amber-500'}`}><Ico name={g.status==='on_track'?'check':'alert'} size={16}/></span><div className="flex-1"><div className="flex items-center justify-between"><h3 className="text-sm font-semibold">{g.title}</h3><Ico name={exp===g.id?'up':'down'} size={14} cls="text-gray-400"/></div><div className="flex items-center gap-3 mt-1.5"><Pill color="blue">{PILLAR_NAMES[g.pillar]}</Pill><span className="text-xs text-gray-500">Due {g.due}</span></div><div className="flex items-center gap-2 mt-2"><div className="flex-1 bg-gray-100 rounded-full h-2"><div className={`h-2 rounded-full ${g.status==='at_risk'?'bg-amber-500':'bg-intuit-blue'}`} style={{width:`${g.progress}%`}}/></div><span className="text-xs font-medium">{g.progress}%</span></div></div></div>
-        {exp===g.id&&<div className="mt-3 pt-3 border-t border-gray-100"><p className="text-xs font-semibold text-gray-500 uppercase mb-2">Key Results</p>{g.krs.map((kr,ki)=><div key={ki} className="mb-1.5"><p className="text-xs text-gray-700">{kr.l}</p><div className="flex items-center gap-1.5 mt-0.5"><div className="flex-1 bg-gray-100 rounded-full h-1"><div className="bg-intuit-blue/70 h-1 rounded-full" style={{width:`${kr.p}%`}}/></div><span className="text-[10px] text-gray-500">{kr.p}%</span></div></div>)}
-          <div className="mt-3 p-3 rounded-lg bg-blue-50 border border-blue-100"><div className="flex items-start gap-2"><Ico name="sparkle" size={12} cls="text-intuit-blue"/><p className="text-xs text-blue-800"><strong>AI Coach:</strong> {g.status==='at_risk'?'At risk. Break into smaller milestones and request resources. Added to 1:1 agenda.':'Good progress! Add quantitative impact metrics for craft skills alignment.'}</p></div></div>
-        </div>}
-      </Card>)}</div></div>
+    <div className="p-8 max-w-5xl mx-auto space-y-6">
+      <div className="fade-up">
+        <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5"><span className="text-brand-500"><I name="target" size={24}/></span> Goals Coach</h1>
+        <p className="text-slate-400 text-sm mt-1">AI-powered goal creation aligned to craft skills and business outcomes.</p>
+      </div>
+      <div className="bg-white rounded-xl border border-slate-200/60 p-5 fade-up fade-up-d1">
+        <div className="flex items-center gap-2 mb-3"><I name="spark" size={14} className="text-brand-500"/><h2 className="font-semibold text-sm text-slate-700">Draft a New Goal with AI</h2></div>
+        <div className="flex gap-2">
+          <input type="text" placeholder="Describe what you want to accomplish..." className="flex-1 px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm bg-slate-50/50 placeholder:text-slate-400" value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>e.key==='Enter'&&gen()}/>
+          <button onClick={gen} disabled={ai.loading} className="bg-brand-500 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-brand-600 transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50"><I name="spark" size={14}/> Generate</button>
+        </div>
+        <AiOutput text={ai.result} loading={ai.loading} error={ai.error} onRefine={handleRefine} label="AI-Generated Goal"/>
+      </div>
+      <div className="fade-up fade-up-d2">
+        <div className="flex items-center justify-between mb-4"><h2 className="font-semibold text-sm text-slate-700">Active Goals</h2><span className="text-[11px] text-slate-400">{GOALS.filter(g=>g.status==='on_track').length} on track · {GOALS.filter(g=>g.status==='at_risk').length} at risk</span></div>
+        <div className="space-y-3">{GOALS.map(g=>(
+          <div key={g.id} className="bg-white rounded-xl border border-slate-200/60 p-4 hover:shadow-sm transition-all">
+            <div className="flex items-start gap-3 cursor-pointer" onClick={()=>setExp(exp===g.id?null:g.id)}>
+              <div className={`w-2 h-2 rounded-full mt-2 shrink-0 ${g.status==='on_track'?'bg-success-500':'bg-warn-500'}`}/>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-4"><h3 className="text-[13px] font-semibold text-slate-800">{g.title}</h3><I name={exp===g.id?'up':'down'} size={14} className="text-slate-300 shrink-0"/></div>
+                <div className="flex items-center gap-3 mt-2"><Badge color={g.status==='at_risk'?'yellow':'blue'}>{PILLAR_LABEL[g.pillar]}</Badge><span className="text-[11px] text-slate-400">Due {g.due}</span></div>
+                <div className="flex items-center gap-2 mt-2.5"><div className="flex-1 bg-slate-100 rounded-full h-1.5"><div className={`h-1.5 rounded-full ${g.status==='at_risk'?'bg-warn-500':'bg-brand-500'}`} style={{width:`${g.progress}%`}}/></div><span className="text-[11px] font-medium text-slate-500 tabular-nums">{g.progress}%</span></div>
+              </div>
+            </div>
+            {exp===g.id&&<div className="mt-4 pt-4 border-t border-slate-100 ml-5"><p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2.5">Key Results</p>{g.krs.map((kr,i)=><div key={i} className="mb-2"><p className="text-[12px] text-slate-600">{kr.l}</p><div className="flex items-center gap-2 mt-1"><div className="flex-1 bg-slate-100 rounded-full h-1"><div className="bg-brand-500/60 h-1 rounded-full" style={{width:`${kr.p}%`}}/></div><span className="text-[10px] text-slate-400 tabular-nums">{kr.p}%</span></div></div>)}</div>}
+          </div>
+        ))}</div>
+      </div>
     </div>
   );
 }
 
 /* ── FEEDBACK COACH ── */
 function FeedbackCoach() {
-  const [input,setInput]=useState('');const [aiDraft,setAiDraft]=useState('');const [tab,setTab]=useState('received');const [biasOk,setBiasOk]=useState(false);
-  const draftFb=()=>{if(!input.trim())return;const t="SBI Model Feedback:\n\nSituation: During Q3 sprint planning last Tuesday...\n\nBehavior: You proactively identified the dependency between AI agent framework and onboarding flow, created a detailed spec, and facilitated alignment with both engineering teams within 24 hours.\n\nImpact: Prevented a 2-week delay, ensured parallel work, directly contributing to hitting our milestone on time.\n\nCraft Skill: Strong Product Execution \u2014 \"Facilitates cross functional team using AI as an accelerant.\"\n\nAction: Continue identifying cross-team dependencies early; document your approach as a playbook.";let i=0;setAiDraft('');const iv=setInterval(()=>{setAiDraft(t.slice(0,i));i+=4;if(i>t.length){setAiDraft(t);clearInterval(iv);}},12);};
-  const themes=[{t:'Execution Excellence',c:5,up:true,p:'Product Execution'},{t:'Technical Collaboration',c:3,up:true,p:'Technology Fluency'},{t:'Stakeholder Communication',c:2,up:false,p:'Org Effectiveness'},{t:'Strategic Thinking',c:2,up:true,p:'Product Strategy'}];
+  const [input,setInput]=useState('');const [tab,setTab]=useState('received');
+  const draftAi = useAI();
+  const biasAi = useAI();
+  const themes=[{t:'Execution Speed',c:5,up:true,p:'Product Execution'},{t:'Technical Partnership',c:3,up:true,p:'Technology Fluency'},{t:'Stakeholder Timing',c:2,up:false,p:'Org Effectiveness'},{t:'Strategic Thinking',c:2,up:true,p:'Product Strategy'}];
+
+  const draftFb = async () => {
+    if(!input.trim()) return;
+    await draftAi.run([{role:'user',content:`Draft feedback using the SBI (Situation-Behavior-Impact) model for this situation: "${input}"\n\nFormat with:\n- Situation: (specific context)\n- Behavior: (observable actions)\n- Impact: (measurable outcome)\n- Craft Skill Alignment: (which PM craft skill this demonstrates)\n- Suggested next step for the person\n\nMake it specific, evidence-based, and growth-oriented.`}],
+    SYSTEM_PROMPT);
+  };
+
+  const checkBias = async () => {
+    const textToCheck = draftAi.result || input;
+    if (!textToCheck.trim()) return;
+    await biasAi.run([{role:'user',content:`Analyze this feedback for bias and language quality:\n\n"${textToCheck}"\n\nCheck for:\n1. Gender-neutral language (pass/fail + details)\n2. Specific evidence cited vs vague claims (pass/fail)\n3. Actionable suggestions present (pass/fail)\n4. Avoids subjective/personality descriptors (pass/fail)\n5. Overall bias risk assessment\n\nBe direct. If something needs fixing, say exactly what and why.`}],
+    SYSTEM_PROMPT);
+  };
+
+  const handleRefine = async (action) => {
+    if (action === 'accept') { draftAi.reset(); setInput(''); return; }
+    await draftAi.run([
+      {role:'user',content:`Draft SBI feedback for: "${input}"`},
+      {role:'assistant',content:draftAi.result},
+      {role:'user',content:'Refine this feedback. Make it more specific, ensure the impact is quantified, and add a forward-looking development suggestion tied to craft skills.'}
+    ], SYSTEM_PROMPT);
+  };
+
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-5 fade-in">
-      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Ico name="message" size={22} cls="text-emerald-600"/> Feedback Coach</h1><p className="text-gray-500 text-sm mt-1">SBI feedback drafting, bias detection, and thematic analysis.</p></div>
-      <Card><div className="flex items-center gap-2 mb-3"><Ico name="sparkle" size={14} cls="text-emerald-600"/><h2 className="font-semibold text-sm">Draft Feedback with AI</h2></div><textarea className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 h-20 resize-none" placeholder="Describe what happened and for whom..." value={input} onChange={e=>setInput(e.target.value)}/><div className="flex gap-2 mt-2"><button className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center gap-1.5" onClick={draftFb}><Ico name="sparkle" size={14}/> Draft with SBI</button><Btn onClick={()=>setBiasOk(true)}><Ico name="shield" size={14}/> Check Bias</Btn></div>
-        {biasOk&&<div className="mt-3 p-3 rounded-lg bg-emerald-50 border border-emerald-100"><p className="text-xs font-semibold text-emerald-700 mb-1">Language Audit: All Clear</p><div className="grid grid-cols-2 gap-1">{['Gender-neutral language','Specific evidence cited','Actionable suggestions','Avoids subjective terms'].map((c,i)=><div key={i} className="flex items-center gap-1.5 text-xs text-emerald-700"><Ico name="thumbsUp" size={11}/>{c}</div>)}</div></div>}
-        {aiDraft&&<div className="mt-3 p-4 rounded-lg bg-gradient-to-br from-emerald-50 to-blue-50 border border-emerald-100"><p className="text-xs font-semibold text-emerald-700 mb-2">AI-Generated SBI Feedback</p><div className="text-sm text-gray-800 whitespace-pre-line leading-relaxed">{aiDraft}</div><div className="flex gap-2 mt-3"><button className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1"><Ico name="send" size={11}/> Send</button><Btn cls="text-xs">Refine</Btn></div></div>}
-      </Card>
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 w-fit">{['received','themes'].map(t=><button key={t} onClick={()=>setTab(t)} className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${tab===t?'bg-white text-gray-900 shadow-sm':'text-gray-500'}`}>{t==='received'?'Received':'Themes'}</button>)}</div>
-      {tab==='received'&&<div className="space-y-2">{MOCK_FEEDBACK.map(f=><Card key={f.id}><div className="flex items-center justify-between mb-1"><p className="text-sm font-medium">{f.from}</p><Pill color={f.sentiment==='positive'?'green':'purple'}>{f.sentiment}</Pill></div><p className="text-xs text-gray-600">{f.summary}</p></Card>)}</div>}
-      {tab==='themes'&&<Card><h3 className="font-semibold text-sm mb-3">Feedback Themes (AI)</h3>{themes.map((t,i)=><div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50 mb-2"><div className="flex-1"><p className="text-sm font-medium">{t.t}</p><p className="text-xs text-gray-500">{t.p} | {t.c} mentions</p></div><span className="flex items-center gap-1 text-xs text-gray-500"><Ico name="trending" size={12} cls={t.up?'text-emerald-500':'text-gray-400'}/>{t.up?'Improving':'Stable'}</span></div>)}<div className="mt-3 p-3 rounded-lg bg-blue-50 border border-blue-100"><div className="flex items-start gap-2"><Ico name="sparkle" size={12} cls="text-intuit-blue"/><p className="text-xs text-blue-800"><strong>AI Summary:</strong> Strongest: execution excellence. Growth area: share design decisions earlier in the process.</p></div></div></Card>}
+    <div className="p-8 max-w-5xl mx-auto space-y-6">
+      <div className="fade-up">
+        <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5"><span className="text-success-500"><I name="msg" size={24}/></span> Feedback Coach</h1>
+        <p className="text-slate-400 text-sm mt-1">AI-powered feedback drafting with SBI framework and bias detection.</p>
+      </div>
+      <div className="bg-white rounded-xl border border-slate-200/60 p-5 fade-up fade-up-d1">
+        <div className="flex items-center gap-2 mb-3"><I name="spark" size={14} className="text-success-500"/><h2 className="font-semibold text-sm text-slate-700">Write Feedback with AI</h2></div>
+        <textarea className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm bg-slate-50/50 h-24 resize-none placeholder:text-slate-400" placeholder="Describe what happened, who was involved, and the outcome..." value={input} onChange={e=>setInput(e.target.value)}/>
+        <div className="flex gap-2 mt-3">
+          <button onClick={draftFb} disabled={draftAi.loading} className="bg-success-500 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-success-700 transition-colors flex items-center gap-1.5 disabled:opacity-50"><I name="spark" size={14}/> Draft with SBI</button>
+          <button onClick={checkBias} disabled={biasAi.loading} className="bg-white text-slate-600 px-4 py-2.5 rounded-lg text-sm font-medium border border-slate-200 hover:bg-slate-50 flex items-center gap-1.5 disabled:opacity-50"><I name="shield" size={14}/> Check Bias</button>
+        </div>
+        <AiOutput text={biasAi.result} loading={biasAi.loading} error={biasAi.error} label="Bias Analysis"/>
+        <AiOutput text={draftAi.result} loading={draftAi.loading} error={draftAi.error} onRefine={handleRefine} label="AI-Generated Feedback"/>
+      </div>
+      <div className="flex gap-1 bg-slate-100 rounded-lg p-0.5 w-fit fade-up fade-up-d2">
+        {['received','themes'].map(t=><button key={t} onClick={()=>setTab(t)} className={`px-5 py-1.5 rounded-md text-[12px] font-medium transition-all ${tab===t?'bg-white text-slate-900 shadow-sm':'text-slate-400'}`}>{t==='received'?'Received':'Themes'}</button>)}
+      </div>
+      {tab==='received'&&<div className="space-y-3 fade-up">{FEEDBACK.map(f=><div key={f.id} className="bg-white rounded-xl border border-slate-200/60 p-4"><div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2.5"><div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold ${f.type==='peer'?'bg-brand-500':'bg-violet-500'}`}>{f.from.split(' ').map(w=>w[0]).join('')}</div><div><p className="text-[13px] font-semibold text-slate-800">{f.from}</p><p className="text-[11px] text-slate-400">{f.role} · {f.date}</p></div></div><Badge color={f.sentiment==='positive'?'green':'yellow'}>{f.sentiment}</Badge></div><p className="text-[13px] text-slate-600 leading-relaxed">{f.summary}</p><Badge color="blue" className="mt-2">{PILLAR_LABEL[f.pillar]}</Badge></div>)}</div>}
+      {tab==='themes'&&<div className="bg-white rounded-xl border border-slate-200/60 p-5 fade-up"><h3 className="font-semibold text-sm text-slate-700 mb-4">Feedback Themes</h3>{themes.map((t,i)=><div key={i} className="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 mb-1"><div className="flex-1"><p className="text-[13px] font-medium text-slate-800">{t.t}</p><p className="text-[11px] text-slate-400">{t.p} · {t.c} mentions</p></div><div className="flex items-center gap-1.5"><I name="trend" size={14} className={t.up?'text-success-500':'text-slate-300'}/><span className="text-[11px] text-slate-500">{t.up?'Improving':'Stable'}</span></div></div>)}</div>}
     </div>
   );
 }
 
 /* ── CHECK-IN PREP ── */
 function CheckInPrep() {
-  const pc={high:'border-l-red-400 bg-red-50/50',medium:'border-l-amber-400 bg-amber-50/30',low:'border-l-blue-400 bg-blue-50/30'};
-  const pl={high:'red',medium:'yellow',low:'blue'};
-  const prompts=['What support do you need for the data pipeline goal?','How can we align platform strategy with VP priorities?','What feedback from Priya resonated?','Are you getting enough deep work time?'];
+  const pc={high:'border-l-red-400 bg-red-50/40',medium:'border-l-amber-300 bg-amber-50/30',low:'border-l-brand-200 bg-brand-50/30'};
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-5 fade-in">
-      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Ico name="calendar" size={22} cls="text-purple-600"/> 1:1 Prep Assistant</h1><p className="text-gray-500 text-sm mt-1">AI-generated agenda from goal progress, feedback, and risk signals.</p></div>
-      <Card cls="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200"><div className="flex items-center justify-between"><div><p className="text-xs text-purple-600 font-semibold uppercase">Next 1:1 with Sarah Kim</p><p className="text-lg font-bold mt-1">Thursday, March 7 at 2:00 PM</p><p className="text-xs text-gray-500 mt-1">30 min | Weekly</p></div><div className="text-right"><Pill color="purple">In 3 days</Pill><p className="text-xs text-gray-500 mt-1">Auto-generated</p></div></div></Card>
+    <div className="p-8 max-w-5xl mx-auto space-y-6">
+      <div className="fade-up">
+        <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5"><span className="text-violet-500"><I name="cal" size={24}/></span> 1:1 Prep</h1>
+        <p className="text-slate-400 text-sm mt-1">AI-generated agenda from goal progress, feedback, and risk signals.</p>
+      </div>
+      <div className="bg-white rounded-xl border border-slate-200/60 p-5 bg-gradient-to-r from-violet-50/50 to-brand-50/30 fade-up fade-up-d1">
+        <div className="flex items-center justify-between"><div><p className="text-[11px] text-violet-500 font-semibold uppercase tracking-wider">Next 1:1</p><p className="text-xl font-bold text-slate-900 mt-1">Sarah Kim · Thursday, March 7</p><p className="text-[13px] text-slate-500 mt-0.5">2:00 PM · 30 min · Weekly</p></div><Badge color="purple">In 3 days</Badge></div>
+      </div>
       <div className="grid grid-cols-3 gap-5">
-        <div className="col-span-2 space-y-4">
-          <Card><div className="flex items-center gap-2 mb-3"><Ico name="sparkle" size={14} cls="text-purple-600"/><h2 className="font-semibold text-sm">AI-Generated Agenda</h2></div>{CHECKIN_TOPICS.map((t,i)=><div key={i} className={`p-3 rounded-lg border-l-4 mb-2 ${pc[t.priority]}`}><p className="text-sm font-medium">{t.topic}</p><div className="flex items-center gap-2 mt-1"><Pill color={pl[t.priority]}>{t.priority}</Pill><span className="text-[11px] text-gray-500">Source: {t.source}</span></div></div>)}</Card>
-          <Card><h2 className="font-semibold text-sm mb-3">Action Items</h2>{[{a:'Share revised data pipeline timeline',o:'Alex',d:'Mar 10'},{a:'Sync with Priya on communication cadence',o:'Alex',d:'Mar 7'},{a:'Review platform strategy draft',o:'Sarah',d:'Mar 12'}].map((f,i)=><div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 mb-1.5"><input type="checkbox" className="rounded border-gray-300"/><div className="flex-1"><p className="text-sm">{f.a}</p><p className="text-[11px] text-gray-500">{f.o} | Due {f.d}</p></div></div>)}</Card>
+        <div className="col-span-2 space-y-5">
+          <div className="bg-white rounded-xl border border-slate-200/60 p-5 fade-up fade-up-d2">
+            <div className="flex items-center gap-2 mb-4"><I name="spark" size={14} className="text-violet-500"/><h2 className="font-semibold text-sm text-slate-700">AI-Generated Agenda</h2><Badge color="slate">Auto-prioritized</Badge></div>
+            <div className="space-y-2.5">{CHECKIN_TOPICS.map((t,i)=><div key={i} className={`p-3.5 rounded-lg border-l-[3px] ${pc[t.priority]}`}><p className="text-[13px] font-medium text-slate-800">{t.topic}</p><div className="flex items-center gap-2 mt-1.5"><Badge color={t.priority==='high'?'red':t.priority==='medium'?'yellow':'blue'}>{t.priority}</Badge><span className="text-[11px] text-slate-400">{t.source}</span></div></div>)}</div>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200/60 p-5 fade-up fade-up-d3">
+            <h2 className="font-semibold text-sm text-slate-700 mb-3">Action Items</h2>
+            {[{a:'Share revised data pipeline timeline',o:'Alex',d:'Mar 10'},{a:'Set up weekly design sync with Lisa',o:'Alex',d:'Mar 7'},{a:'Add revenue metrics to strategy doc',o:'Alex',d:'Mar 12'},{a:'Review PM1 beta launch plan',o:'Sarah',d:'Mar 14'}].map((f,i)=><div key={i} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 mb-1"><input type="checkbox" className="rounded border-slate-300 w-4 h-4"/><div className="flex-1"><p className="text-[13px] text-slate-700">{f.a}</p><p className="text-[11px] text-slate-400">{f.o} · Due {f.d}</p></div></div>)}
+          </div>
         </div>
-        <div className="space-y-4">
-          <Card><div className="flex items-center gap-2 mb-3"><Ico name="lightbulb" size={14} cls="text-amber-500"/><h3 className="font-semibold text-sm">Coaching Prompts</h3></div>{prompts.map((p,i)=><div key={i} className="p-2 rounded-lg bg-amber-50 border border-amber-100 mb-2"><p className="text-xs text-amber-900">"{p}"</p></div>)}</Card>
-          <div className="p-3 rounded-lg bg-purple-50 border border-purple-100"><p className="text-xs text-purple-800"><strong>Explainability:</strong> Agenda from 4 goal updates, 4 feedback items, simulated sprint data. All advisory.</p></div>
+        <div className="space-y-5">
+          <div className="bg-white rounded-xl border border-slate-200/60 p-5 fade-up fade-up-d2">
+            <div className="flex items-center gap-2 mb-3"><I name="bulb" size={14} className="text-warn-500"/><h3 className="font-semibold text-sm text-slate-700">Coaching Prompts</h3></div>
+            {['What support do you need for the pipeline recovery?','How should we frame the strategy for the board?','What cadence with design would prevent late-sprint surprises?','Are you getting enough focus time?'].map((p,i)=><div key={i} className="p-2.5 rounded-lg bg-warn-50 border border-amber-100 mb-2"><p className="text-[12px] text-amber-800 italic">"{p}"</p></div>)}
+          </div>
+          <div className="p-4 rounded-xl bg-violet-50 border border-violet-100 fade-up fade-up-d3">
+            <p className="text-[11px] text-violet-600 font-semibold mb-1">How this was generated</p>
+            <p className="text-[11px] text-violet-500 leading-relaxed">Synthesized from 4 goals, 4 feedback items, and sprint data. All suggestions are advisory.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -342,74 +561,118 @@ function CheckInPrep() {
 /* ── CRAFT SKILLS ── */
 function CraftSkills() {
   const [level,setLevel]=useState('staff');const [exp,setExp]=useState('product_strategy');const [ratings,setRatings]=useState({});
-  const rLabels=['Not Demonstrated','Developing','Competent','Proficient','Expert'];
+  const rLabels=['Not Yet','Developing','Competent','Proficient','Expert'];
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-5 fade-in">
-      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Ico name="layers" size={22} cls="text-intuit-warm"/> Craft Skills Assessment</h1><p className="text-gray-500 text-sm mt-1">Self-assess against the PM Craft Skills Rubric FY26.</p></div>
-      <Card cls="flex items-center gap-4"><label className="text-sm font-medium">Assessing for:</label><select className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm" value={level} onChange={e=>setLevel(e.target.value)}>{LEVELS.map(l=><option key={l.id} value={l.id}>{l.label}</option>)}</select></Card>
-      <div className="grid grid-cols-4 gap-3">{CRAFT_PILLARS.map(p=>{const a=SKILL_ASSESSMENT[p.id];const gap=a.target-a.self;return <Card key={p.id}><div className="flex items-center gap-2 mb-2"><div className="w-3 h-3 rounded-full" style={{backgroundColor:p.color}}/><p className="text-xs font-semibold">{p.name}</p></div><div className="flex items-end gap-1"><span className="text-2xl font-bold">{a.self}</span><span className="text-xs text-gray-500 mb-1">/ 5.0</span></div><div className="flex items-center gap-2 mt-1"><span className="text-xs text-gray-500">Target: {a.target}</span>{gap>0?<Pill color="yellow">Gap: {gap.toFixed(1)}</Pill>:<Pill color="green">At target</Pill>}</div><div className="w-full bg-gray-100 rounded-full h-2 mt-2"><div className="h-2 rounded-full" style={{width:`${(a.self/5)*100}%`,backgroundColor:p.color}}/></div></Card>})}</div>
-      <div className="space-y-3">{CRAFT_PILLARS.map(p=>{const isE=exp===p.id;const skills=p.levels[level]||[];return <Card key={p.id}><div className="flex items-center justify-between cursor-pointer" onClick={()=>setExp(isE?null:p.id)}><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{backgroundColor:`${p.color}15`}}><div className="w-3.5 h-3.5 rounded-full" style={{backgroundColor:p.color}}/></div><div><h3 className="font-semibold text-sm">{p.name}</h3><p className="text-xs text-gray-500">{skills.length} skills at this level</p></div></div><Ico name={isE?'up':'down'} size={14} cls="text-gray-400"/></div>
-        {isE&&<div className="mt-4 pt-4 border-t border-gray-100 space-y-2">{skills.map((s,si)=>{const r=ratings[`${p.id}_${si}`];return <div key={si} className="p-3 rounded-lg bg-gray-50"><div className="flex items-start gap-2"><span className={r?'text-emerald-500':'text-gray-300'}><Ico name={r?'check':'circle'} size={14}/></span><div className="flex-1"><p className="text-sm text-gray-800">{s}</p><div className="flex items-center gap-1 mt-2 flex-wrap">{rLabels.map((l,ri)=><button key={ri} onClick={()=>setRatings(prev=>({...prev,[`${p.id}_${si}`]:ri+1}))} className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${r===ri+1?'text-white shadow-sm':'bg-gray-100 text-gray-500 hover:bg-gray-200'}`} style={r===ri+1?{backgroundColor:p.color}:{}}>{l}</button>)}</div></div></div></div>})}
-          <div className="p-3 rounded-lg bg-blue-50 border border-blue-100"><div className="flex items-start gap-2"><Ico name="sparkle" size={12} cls="text-intuit-blue"/><p className="text-xs text-blue-800"><strong>AI Insight:</strong> Based on self-assessment and feedback, focus on cross-team influence in {p.name} to close the gap to Senior Staff PM.</p></div></div>
-        </div>}
-      </Card>})}</div>
+    <div className="p-8 max-w-5xl mx-auto space-y-6">
+      <div className="fade-up"><h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5"><span className="text-warn-500"><I name="layers" size={24}/></span> Craft Skills Assessment</h1><p className="text-slate-400 text-sm mt-1">Self-assess against the PM Craft Skills Rubric FY26.</p></div>
+      <div className="bg-white rounded-xl border border-slate-200/60 p-4 flex items-center gap-4 fade-up fade-up-d1"><label className="text-[13px] font-medium text-slate-600">Level:</label><select className="px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white" value={level} onChange={e=>setLevel(e.target.value)}>{LEVELS.map(l=><option key={l.id} value={l.id}>{l.label}</option>)}</select></div>
+      <div className="grid grid-cols-4 gap-4 fade-up fade-up-d2">{PILLARS.map(p=>{const a=ASSESS[p.id];const gap=a.target-a.self;return<div key={p.id} className="bg-white rounded-xl border border-slate-200/60 p-4"><div className="flex items-center gap-2 mb-3"><div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor:p.color}}/><p className="text-[12px] font-semibold text-slate-700">{p.name}</p></div><div className="flex items-end gap-1 mb-1"><span className="text-2xl font-bold">{a.self}</span><span className="text-[11px] text-slate-400 mb-1">/ 5</span></div><div className="flex items-center gap-2 mb-2"><span className="text-[11px] text-slate-400">Target: {a.target}</span>{gap>0?<Badge color="yellow">-{gap.toFixed(1)}</Badge>:<Badge color="green">✓</Badge>}</div><div className="w-full bg-slate-100 rounded-full h-2"><div className="h-2 rounded-full" style={{width:`${(a.self/5)*100}%`,backgroundColor:p.color}}/></div></div>})}</div>
+      <div className="space-y-3 fade-up fade-up-d3">{PILLARS.map(p=>{const isE=exp===p.id;const skills=CRAFT_SKILLS[p.id]?.[level]||[];return<div key={p.id} className="bg-white rounded-xl border border-slate-200/60 p-4"><div className="flex items-center justify-between cursor-pointer" onClick={()=>setExp(isE?null:p.id)}><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{backgroundColor:`${p.color}12`}}><div className="w-3 h-3 rounded-full" style={{backgroundColor:p.color}}/></div><div><h3 className="font-semibold text-[13px] text-slate-800">{p.name}</h3><p className="text-[11px] text-slate-400">{skills.length} skills</p></div></div><I name={isE?'up':'down'} size={14} className="text-slate-300"/></div>
+        {isE&&skills.length>0&&<div className="mt-4 pt-4 border-t border-slate-100 space-y-2.5">{skills.map((s,si)=>{const r=ratings[`${p.id}_${si}`];return<div key={si} className="p-3.5 rounded-lg bg-slate-50"><p className="text-[13px] text-slate-700 leading-relaxed">{s}</p><div className="flex items-center gap-1.5 mt-2.5 flex-wrap">{rLabels.map((l,ri)=><button key={ri} onClick={()=>setRatings(prev=>({...prev,[`${p.id}_${si}`]:ri+1}))} className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-all ${r===ri+1?'text-white shadow-sm':'bg-white text-slate-500 border border-slate-200 hover:border-slate-300'}`} style={r===ri+1?{backgroundColor:p.color}:{}}>{l}</button>)}</div></div>})}</div>}
+      </div>})}</div>
     </div>
   );
 }
 
-/* ── PROMOTION READINESS ── */
+/* ── PROMOTION ── */
 function Promotion() {
-  const [showN,setShowN]=useState(false);const dem=RUBRIC_MATCH.filter(r=>r.dem===true).length;
+  const [showN,setShowN]=useState(false);const dem=RUBRIC.filter(r=>r.dem===true).length;
+  const narrativeAi = useAI();
+  const genNarrative = async () => {
+    setShowN(true);
+    await narrativeAi.run([{role:'user',content:`Generate a promotion narrative for Alex Chen (Staff PM T4 → Senior Staff PM T5). Use this evidence:\n\nStrengths: Product Execution (85% - led 3 major launches), Product Strategy (72% - VP-approved 3-year strategy)\nGaps: Org Effectiveness (55% - needs cross-BU influence), Technology Fluency (48% - needs AI evangelism)\nEvidence: SMB AI Onboarding launch (35% time-to-value reduction, 50K users), 3-Year AI Platform Strategy ($10M+), Platform Capability Framework v2, 5 peer recognition mentions, 2 PM mentees on track for promotion\nRubric: 3/6 skills fully demonstrated, 1 partial, 2 gaps\n\nWrite a compelling 2-paragraph promotion narrative. Then list 3 specific recommended actions to close the remaining gaps.`}], SYSTEM_PROMPT);
+  };
+  const handleRefine = async (action) => {
+    if (action === 'accept') return;
+    await narrativeAi.run([
+      {role:'user',content:'Generate promotion narrative for Staff PM → Senior Staff PM'},
+      {role:'assistant',content:narrativeAi.result},
+      {role:'user',content:'Refine this narrative. Make it more compelling, add specific metrics, and strengthen the case with concrete examples. Also make the recommended actions more specific and time-bound.'}
+    ], SYSTEM_PROMPT);
+  };
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-5 fade-in">
-      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Ico name="award" size={22} cls="text-pink-600"/> Promotion Readiness</h1><p className="text-gray-500 text-sm mt-1">AI-assembled evidence mapped to craft skills rubric.</p></div>
-      <Card cls="bg-gradient-to-r from-pink-50 to-purple-50 border-pink-200"><div className="flex items-center justify-between"><div><p className="text-xs text-pink-600 font-semibold uppercase">Readiness for Senior Staff PM (T5)</p><div className="flex items-end gap-2 mt-1"><span className="text-4xl font-bold">68%</span><span className="text-sm text-gray-500 mb-1">overall</span></div><p className="text-xs text-gray-600 mt-1">{dem}/{RUBRIC_MATCH.length} rubric skills | {PROMO_EVIDENCE.length} evidence items</p></div><div className="relative w-20 h-20"><svg className="w-20 h-20 -rotate-90" viewBox="0 0 36 36"><path d="M18 2.0845a15.9155 15.9155 0 010 31.831 15.9155 15.9155 0 010-31.831" fill="none" stroke="#e5e7eb" strokeWidth="3"/><path d="M18 2.0845a15.9155 15.9155 0 010 31.831 15.9155 15.9155 0 010-31.831" fill="none" stroke="#EC4899" strokeWidth="3" strokeDasharray="68,100"/></svg><span className="absolute inset-0 flex items-center justify-center text-lg font-bold">68%</span></div></div></Card>
-      <div className="grid grid-cols-2 gap-5">
-        <Card><h3 className="font-semibold text-sm mb-3 flex items-center gap-2"><span className="text-emerald-500"><Ico name="check" size={14}/></span> Strengths</h3>{[{p:'Product Execution',e:'Led 3 major launches in FY26',s:85},{p:'Product Strategy',e:'Defined 3-year platform strategy',s:72}].map((x,i)=><div key={i} className="p-3 rounded-lg bg-emerald-50 mb-2"><div className="flex items-center justify-between mb-1"><p className="text-sm font-medium text-emerald-900">{x.p}</p><span className="text-xs font-bold text-emerald-700">{x.s}%</span></div><p className="text-xs text-emerald-700">{x.e}</p><div className="w-full bg-emerald-100 rounded-full h-1.5 mt-1.5"><div className="bg-emerald-500 h-1.5 rounded-full" style={{width:`${x.s}%`}}/></div></div>)}</Card>
-        <Card><h3 className="font-semibold text-sm mb-3 flex items-center gap-2"><span className="text-amber-500"><Ico name="alert" size={14}/></span> Areas to Develop</h3>{[{p:'Org Effectiveness',e:'Need more cross-team influence examples',s:55},{p:'Technology Fluency',e:'Need AI evangelism across portfolio',s:48}].map((x,i)=><div key={i} className="p-3 rounded-lg bg-amber-50 mb-2"><div className="flex items-center justify-between mb-1"><p className="text-sm font-medium text-amber-900">{x.p}</p><span className="text-xs font-bold text-amber-700">{x.s}%</span></div><p className="text-xs text-amber-700">{x.e}</p><div className="w-full bg-amber-100 rounded-full h-1.5 mt-1.5"><div className="bg-amber-500 h-1.5 rounded-full" style={{width:`${x.s}%`}}/></div></div>)}</Card>
+    <div className="p-8 max-w-5xl mx-auto space-y-6">
+      <div className="fade-up"><h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5"><span className="text-pink-500"><I name="award" size={24}/></span> Promotion Readiness</h1><p className="text-slate-400 text-sm mt-1">AI-assembled evidence for Senior Staff PM (T5).</p></div>
+      <div className="bg-white rounded-xl border border-slate-200/60 p-6 bg-gradient-to-r from-pink-50/50 to-violet-50/30 fade-up fade-up-d1">
+        <div className="flex items-center justify-between"><div><p className="text-[11px] text-pink-500 font-semibold uppercase tracking-wider">Overall Readiness</p><div className="flex items-end gap-2 mt-2"><span className="text-5xl font-extrabold">68</span><span className="text-xl font-bold text-slate-400 mb-1">%</span></div><p className="text-[13px] text-slate-500 mt-1">{dem}/{RUBRIC.length} skills · {PROMO_EVIDENCE.length} evidence items</p></div><div className="relative w-24 h-24"><svg className="w-24 h-24 -rotate-90" viewBox="0 0 36 36"><path d="M18 2.0845a15.9155 15.9155 0 010 31.831 15.9155 15.9155 0 010-31.831" fill="none" stroke="#f1f5f9" strokeWidth="3"/><path d="M18 2.0845a15.9155 15.9155 0 010 31.831 15.9155 15.9155 0 010-31.831" fill="none" stroke="#EC4899" strokeWidth="3" strokeDasharray="68,100" strokeLinecap="round"/></svg><span className="absolute inset-0 flex items-center justify-center text-lg font-bold">68%</span></div></div>
       </div>
-      <Card><div className="flex items-center justify-between mb-3"><h3 className="font-semibold text-sm">Evidence Portfolio</h3><Pill color="blue"><Ico name="sparkle" size={10}/> AI Assembled</Pill></div>{PROMO_EVIDENCE.map((e,i)=><div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50 mb-1.5"><div className="flex-1 min-w-0"><p className="text-sm font-medium">{e.title}</p><p className="text-xs text-gray-500">{e.date} | {e.impact}</p></div><Pill color="blue">{e.pillar}</Pill><div className="w-12 bg-gray-200 rounded-full h-1.5"><div className="bg-pink-500 h-1.5 rounded-full" style={{width:`${e.score}%`}}/></div></div>)}</Card>
-      <Card><div className="flex items-center justify-between mb-3"><h3 className="font-semibold text-sm">Rubric Mapping: Senior Staff PM (T5)</h3><Btn cls="text-xs" onClick={()=>setShowN(!showN)}><Ico name="file" size={11}/> {showN?'Hide':'Generate'} Narrative</Btn></div>{RUBRIC_MATCH.map((r,i)=><div key={i} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 mb-1.5"><span className={r.dem===true?'text-emerald-500':r.dem==='partial'?'text-amber-500':'text-red-400'}><Ico name={r.dem===true?'check':'alert'} size={14}/></span><div className="flex-1"><p className="text-sm">{r.skill}</p><p className="text-[11px] text-gray-500">Evidence: {r.ev}</p></div></div>)}
-        {showN&&<div className="mt-3 p-4 rounded-lg bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-100"><div className="flex items-center gap-2 mb-2"><Ico name="sparkle" size={12} cls="text-pink-600"/><p className="text-xs font-semibold text-pink-700">AI Promotion Narrative</p></div><p className="text-sm text-gray-800 leading-relaxed">Alex has demonstrated consistent Senior Staff PM capabilities across Product Execution and Strategy. Key highlights: SMB AI Onboarding launch (35% time-to-value reduction, 50K users) and VP-approved 3-Year AI Platform Strategy ($10M+ investment). Areas for development: cross-BU influence in Org Effectiveness and AI evangelism in Technology Fluency. Recommended: lead cross-BU architecture review and present at PM All-Hands.</p><div className="flex gap-2 mt-3"><button className="bg-pink-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium">Export Package</button><Btn cls="text-xs">Refine</Btn></div></div>}
-      </Card>
+      <div className="grid grid-cols-2 gap-5 fade-up fade-up-d2">
+        <div className="bg-white rounded-xl border border-slate-200/60 p-5"><h3 className="font-semibold text-sm text-slate-700 mb-3 flex items-center gap-2"><span className="text-success-500"><I name="check" size={14}/></span> Strengths</h3>{[{p:'Product Execution',e:'Led 3 major launches with measurable impact',s:85},{p:'Product Strategy',e:'VP-approved 3-year strategy, $10M+ roadmap',s:72}].map((x,i)=><div key={i} className="p-3.5 rounded-lg bg-success-50 mb-2.5"><div className="flex items-center justify-between mb-1"><p className="text-[13px] font-medium text-emerald-900">{x.p}</p><span className="text-[11px] font-bold text-success-700">{x.s}%</span></div><p className="text-[11px] text-success-700">{x.e}</p><div className="w-full bg-emerald-100 rounded-full h-1.5 mt-2"><div className="bg-success-500 h-1.5 rounded-full" style={{width:`${x.s}%`}}/></div></div>)}</div>
+        <div className="bg-white rounded-xl border border-slate-200/60 p-5"><h3 className="font-semibold text-sm text-slate-700 mb-3 flex items-center gap-2"><span className="text-warn-500"><I name="alert" size={14}/></span> Growth Areas</h3>{[{p:'Org Effectiveness',e:'Need cross-BU influence examples',s:55},{p:'Technology Fluency',e:'Need AI evangelism across portfolio',s:48}].map((x,i)=><div key={i} className="p-3.5 rounded-lg bg-warn-50 mb-2.5"><div className="flex items-center justify-between mb-1"><p className="text-[13px] font-medium text-amber-900">{x.p}</p><span className="text-[11px] font-bold text-warn-700">{x.s}%</span></div><p className="text-[11px] text-warn-700">{x.e}</p><div className="w-full bg-amber-100 rounded-full h-1.5 mt-2"><div className="bg-warn-500 h-1.5 rounded-full" style={{width:`${x.s}%`}}/></div></div>)}</div>
+      </div>
+      <div className="bg-white rounded-xl border border-slate-200/60 p-5 fade-up fade-up-d3"><div className="flex items-center justify-between mb-4"><h3 className="font-semibold text-sm text-slate-700">Evidence Portfolio</h3><Badge color="blue"><I name="spark" size={10}/> AI-Assembled</Badge></div><div className="space-y-2">{PROMO_EVIDENCE.map((e,i)=><div key={i} className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50"><div className="flex-1 min-w-0"><p className="text-[13px] font-medium text-slate-800">{e.title}</p><p className="text-[11px] text-slate-400">{e.date} · {e.impact}</p></div><Badge color="blue">{PILLAR_LABEL[e.pillar]}</Badge><div className="w-14 bg-slate-100 rounded-full h-1.5"><div className="bg-pink-500 h-1.5 rounded-full" style={{width:`${e.score}%`}}/></div></div>)}</div></div>
+      <div className="bg-white rounded-xl border border-slate-200/60 p-5 fade-up fade-up-d4">
+        <div className="flex items-center justify-between mb-4"><h3 className="font-semibold text-sm text-slate-700">Rubric Mapping</h3><button onClick={genNarrative} disabled={narrativeAi.loading} className="bg-white text-slate-600 px-3 py-1.5 rounded-lg text-[12px] font-medium border border-slate-200 hover:bg-slate-50 flex items-center gap-1.5 disabled:opacity-50"><I name="spark" size={12}/> Generate Narrative</button></div>
+        <div className="space-y-1.5">{RUBRIC.map((r,i)=><div key={i} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50"><span className={r.dem===true?'text-success-500':r.dem==='partial'?'text-warn-500':'text-slate-300'}><I name={r.dem===true?'check':r.dem==='partial'?'alert':'circle'} size={15}/></span><div className="flex-1"><p className="text-[13px] text-slate-700">{r.skill}</p><p className="text-[11px] text-slate-400">{r.ev}</p></div></div>)}</div>
+        {showN && <AiOutput text={narrativeAi.result} loading={narrativeAi.loading} error={narrativeAi.error} onRefine={handleRefine} label="AI Promotion Narrative"/>}
+      </div>
     </div>
   );
 }
 
-/* ── DEVELOPMENT PLANNER ── */
+/* ── DEV PLANNER ── */
 function DevPlan() {
   const [sel,setSel]=useState(0);
-  const paths=[{t:'Senior Staff PM (T5)',tl:'12-18 months',r:68,f:['Org Effectiveness','Tech Fluency']},{t:'Principal PM (T6)',tl:'24-36 months',r:35,f:['Strategic Leadership','Cross-BU Influence']},{t:'Manager 3 (M3)',tl:'18-24 months',r:42,f:['People Management','Team Building']}];
-  const milestones=[{l:'Complete AI Strategy Masterclass',d:'Mar 2026',done:true},{l:'Lead cross-BU architecture review',d:'Apr 2026',done:false},{l:'Present at PM All-Hands on AI',d:'May 2026',done:false},{l:'VP mentor relationship established',d:'Mar 2026',done:true},{l:'Ship 2nd launch with P&L metrics',d:'Jun 2026',done:false},{l:'3+ peer feedback on cross-team influence',d:'Jul 2026',done:false}];
-  const tc={course:'bg-blue-100 text-intuit-blue',stretch:'bg-purple-100 text-purple-600',mentor:'bg-emerald-100 text-emerald-600',project:'bg-amber-100 text-amber-600'};
+  const paths=[{t:'Senior Staff PM (T5)',tl:'12–18 months',r:68,f:['Org Effectiveness','Tech Fluency']},{t:'Principal PM (T6)',tl:'24–36 months',r:35,f:['Strategic Leadership','Cross-BU Influence']},{t:'Eng Manager (M3)',tl:'18–24 months',r:42,f:['People Leadership','Team Building']}];
+  const milestones=[{l:'Complete AI Strategy Masterclass',d:'Mar 2026',done:true},{l:'Lead cross-BU architecture review',d:'Apr 2026',done:false},{l:'Present at PM All-Hands',d:'May 2026',done:false},{l:'VP mentoring relationship',d:'Mar 2026',done:true},{l:'Ship 2nd launch with P&L metrics',d:'Jun 2026',done:false},{l:'3+ peer feedback on cross-team influence',d:'Jul 2026',done:false}];
+  const tc={course:'bg-brand-50 text-brand-500',stretch:'bg-violet-50 text-violet-500',mentor:'bg-success-50 text-success-500',project:'bg-warn-50 text-warn-500'};
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-5 fade-in">
-      <div><h1 className="text-2xl font-bold flex items-center gap-2"><Ico name="trending" size={22} cls="text-teal-600"/> Development Planner</h1><p className="text-gray-500 text-sm mt-1">AI-personalized learning, stretch opportunities, and career simulations.</p></div>
-      <Card><div className="flex items-center gap-2 mb-3"><Ico name="sparkle" size={14} cls="text-teal-600"/><h2 className="font-semibold text-sm">Career Path Simulation</h2></div><div className="grid grid-cols-3 gap-3">{paths.map((p,i)=><div key={i} onClick={()=>setSel(i)} className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${sel===i?'border-teal-500 bg-teal-50':'border-gray-200 hover:border-gray-300'}`}><h3 className="font-semibold text-sm">{p.t}</h3><p className="text-xs text-gray-500 mt-1">{p.tl}</p><div className="flex items-center gap-2 mt-2"><div className="flex-1 bg-gray-200 rounded-full h-2"><div className="bg-teal-500 h-2 rounded-full" style={{width:`${p.r}%`}}/></div><span className="text-xs font-bold">{p.r}%</span></div><div className="flex flex-wrap gap-1 mt-2">{p.f.map((f,fi)=><Pill key={fi} color="blue">{f}</Pill>)}</div></div>)}</div></Card>
-      <div className="grid grid-cols-2 gap-5">
-        <Card><h2 className="font-semibold text-sm mb-3">AI Recommendations</h2>{DEV_RECS.map((r,i)=><div key={i} className="flex items-start gap-3 p-2.5 rounded-lg bg-gray-50 mb-2"><div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${tc[r.type]}`}><Ico name={r.type==='course'?'book':r.type==='mentor'?'user':'briefcase'} size={14}/></div><div className="flex-1"><p className="text-sm font-medium">{r.title}</p>{r.provider&&<p className="text-[11px] text-gray-400">{r.provider}</p>}</div><Pill color={r.priority==='high'?'red':r.priority==='medium'?'yellow':'blue'}>{r.priority}</Pill></div>)}</Card>
-        <Card><h2 className="font-semibold text-sm mb-3">Milestones</h2>{milestones.map((m,i)=><div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 mb-1.5"><span className={m.done?'text-emerald-500':'text-gray-300'}><Ico name={m.done?'check':'circle'} size={14}/></span><div className="flex-1"><p className={`text-sm ${m.done?'text-gray-500 line-through':''}`}>{m.l}</p><p className="text-[10px] text-gray-400">Target: {m.d}</p></div></div>)}<div className="mt-3 p-3 rounded-lg bg-teal-50 border border-teal-100"><div className="flex items-start gap-2"><Ico name="sparkle" size={12} cls="text-teal-600"/><p className="text-xs text-teal-800"><strong>AI:</strong> 2 milestones ahead of typical trajectory. Focus on cross-team influence to reach ~80% readiness.</p></div></div></Card>
+    <div className="p-8 max-w-5xl mx-auto space-y-6">
+      <div className="fade-up"><h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5"><span className="text-teal-500"><I name="trend" size={24}/></span> Development Planner</h1><p className="text-slate-400 text-sm mt-1">AI-personalized learning paths and career simulations.</p></div>
+      <div className="bg-white rounded-xl border border-slate-200/60 p-5 fade-up fade-up-d1">
+        <h2 className="font-semibold text-sm text-slate-700 mb-4">Career Path Simulation</h2>
+        <div className="grid grid-cols-3 gap-3">{paths.map((p,i)=><div key={i} onClick={()=>setSel(i)} className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${sel===i?'border-teal-400 bg-teal-50/50 shadow-sm':'border-slate-200 hover:border-slate-300'}`}><h3 className="font-semibold text-[13px]">{p.t}</h3><p className="text-[11px] text-slate-400 mt-0.5">Est. {p.tl}</p><div className="flex items-center gap-2 mt-3"><div className="flex-1 bg-slate-100 rounded-full h-2"><div className="bg-teal-500 h-2 rounded-full" style={{width:`${p.r}%`}}/></div><span className="text-[11px] font-bold">{p.r}%</span></div><div className="flex flex-wrap gap-1 mt-2">{p.f.map((f,fi)=><Badge key={fi} color="blue">{f}</Badge>)}</div></div>)}</div>
       </div>
-      <Card><h2 className="font-semibold text-sm mb-3">Skill Gap Bridge: Current → {paths[sel].t}</h2>{[{s:'Org Effectiveness',c:3.5,t:4.2,g:'Cross-team strategic influence'},{s:'Technology Fluency',c:3.2,t:4.0,g:'AI evangelism, portfolio-level tech'},{s:'Product Strategy',c:3.5,t:4.0,g:'P&L-linked business outcomes'},{s:'Product Execution',c:4.0,t:4.2,g:'Continue current trajectory'}].map((x,i)=><div key={i} className="flex items-center gap-3 mb-2.5"><div className="w-32 text-sm font-medium">{x.s}</div><div className="flex-1 relative"><div className="bg-gray-100 rounded-full h-3"><div className="bg-teal-400 h-3 rounded-full relative" style={{width:`${(x.c/5)*100}%`}}><span className="absolute right-1 top-0 text-[8px] font-bold text-white leading-3">{x.c}</span></div></div><div className="absolute top-0 h-3 border-r-2 border-dashed border-pink-400" style={{left:`${(x.t/5)*100}%`}}/></div><div className="w-8 text-xs text-gray-500 text-right">{x.t}</div><Ico name="arrow" size={12} cls="text-gray-400"/><div className="w-48 text-xs text-gray-500">{x.g}</div></div>)}</Card>
+      <div className="grid grid-cols-2 gap-5 fade-up fade-up-d2">
+        <div className="bg-white rounded-xl border border-slate-200/60 p-5"><h2 className="font-semibold text-sm text-slate-700 mb-3">Recommendations</h2><div className="space-y-2">{DEV_RECS.map((r,i)=><div key={i} className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-50"><div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${tc[r.type]}`}><I name={r.type==='course'?'book':r.type==='mentor'?'user':r.type==='stretch'?'brief':'bulb'} size={14}/></div><div className="flex-1"><p className="text-[13px] font-medium text-slate-800">{r.title}</p><p className="text-[11px] text-slate-400">{r.reason}{r.provider?` · ${r.provider}`:''}</p></div><Badge color={r.priority==='high'?'red':'yellow'}>{r.priority}</Badge></div>)}</div></div>
+        <div className="bg-white rounded-xl border border-slate-200/60 p-5"><h2 className="font-semibold text-sm text-slate-700 mb-3">Milestones</h2><div className="space-y-1.5">{milestones.map((m,i)=><div key={i} className="flex items-center gap-2.5 p-2.5 rounded-lg hover:bg-slate-50"><span className={m.done?'text-success-500':'text-slate-300'}><I name={m.done?'check':'circle'} size={14}/></span><div className="flex-1"><p className={`text-[13px] ${m.done?'text-slate-400 line-through':'text-slate-700'}`}>{m.l}</p><p className="text-[10px] text-slate-400">{m.d}</p></div></div>)}</div><div className="mt-4 p-3.5 rounded-lg bg-teal-50 border border-teal-100"><div className="flex items-start gap-2"><I name="spark" size={12} className="text-teal-600 mt-0.5"/><p className="text-[12px] text-teal-700"><strong>AI:</strong> 2 milestones ahead of typical. Focus on cross-team influence to reach ~80% readiness.</p></div></div></div>
+      </div>
+      <div className="bg-white rounded-xl border border-slate-200/60 p-5 fade-up fade-up-d3">
+        <h2 className="font-semibold text-sm text-slate-700 mb-4">Skill Gap → {paths[sel].t}</h2>
+        {[{s:'Org Effectiveness',c:3.5,t:4.2,g:'Cross-team strategic influence',col:'#F59E0B'},{s:'Technology Fluency',c:3.2,t:3.8,g:'AI evangelism across portfolio',col:'#8B5CF6'},{s:'Product Strategy',c:3.5,t:4.0,g:'P&L-linked business outcomes',col:'#0077C5'},{s:'Product Execution',c:4.0,t:4.2,g:'Nearly at target',col:'#10B981'}].map((x,i)=><div key={i} className="flex items-center gap-4 mb-3"><div className="w-32 text-[13px] font-medium text-slate-700">{x.s}</div><div className="flex-1 relative"><div className="bg-slate-100 rounded-full h-3"><div className="h-3 rounded-full" style={{width:`${(x.c/5)*100}%`,backgroundColor:x.col,opacity:0.7}}/></div><div className="absolute top-0 h-3 border-r-2 border-dashed border-pink-400" style={{left:`${(x.t/5)*100}%`}}/></div><div className="w-8 text-[11px] text-slate-400 text-right">{x.t}</div><div className="w-52 text-[11px] text-slate-400">{x.g}</div></div>)}
+      </div>
     </div>
   );
 }
 
-/* ── AGENT CHAT ── */
+/* ── AGENT CHAT (Claude-powered) ── */
 function AgentChat({persona}) {
   const [open,setOpen]=useState(false);const [min,setMin]=useState(false);
-  const [msgs,setMsgs]=useState([{role:'assistant',content:persona==='employee'?"Hi Alex! I'm your PM&D Growth Agent. I can help with goals, feedback, 1:1 prep, craft skills, promotion readiness, and development. What would you like?":"Welcome! I'm your Manager Assist co-pilot for team synthesis, 1:1 prep, feedback, and risk detection."}]);
-  const [input,setInput]=useState('');const [typing,setTyping]=useState(false);const endRef=useRef(null);
-  useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'});},[msgs,typing]);
-  const resps={goal:"4 Active Goals \u2014 3 on track, 1 at risk.\n\nData pipeline at 38%. Recommend:\n1. Break into smaller milestones\n2. Discuss resources in 1:1\n3. Connect with platform team\n\nAdded to your 1:1 agenda.",feedback:"Key Themes:\n\nStrengths: Execution velocity (5 mentions)\nGrowth: Stakeholder communication timing\n\nWant me to draft a response?",promo:"Promo Readiness: 68% for T5\n\nStrong: Execution (85%), Strategy (72%)\nGaps: Org Effectiveness (55%), Tech Fluency (48%)\n\nRecommend: Lead Q3 cross-BU review.",def:"I can help with:\n\u2022 Draft goals aligned to craft skills\n\u2022 SBI feedback with bias detection\n\u2022 1:1 prep from performance data\n\u2022 Promotion readiness assessment\n\u2022 Development plans\n\nWhat would you like?"};
-  const send=()=>{if(!input.trim())return;setMsgs(p=>[...p,{role:'user',content:input}]);const q=input.toLowerCase();setInput('');setTyping(true);setTimeout(()=>{const r=q.includes('goal')?resps.goal:q.includes('feedback')?resps.feedback:q.includes('promo')||q.includes('ready')?resps.promo:resps.def;setTyping(false);setMsgs(p=>[...p,{role:'assistant',content:r}]);},1000);};
-  if(!open) return <button onClick={()=>setOpen(true)} className="fixed bottom-5 right-5 w-12 h-12 rounded-full bg-intuit-blue text-white shadow-lg flex items-center justify-center hover:bg-blue-700 transition-all hover:scale-105 z-50"><Ico name="bot" size={22}/></button>;
+  const [msgs,setMsgs]=useState([{role:'assistant',content:persona==='employee'?"Hi Alex — I'm your PM&D Growth Agent, powered by Claude AI. I can help with goals, feedback, 1:1 prep, craft skills, and promotion planning. What's on your mind?":"Welcome — I'm your Manager Assist co-pilot. I can help with team synthesis, 1:1 prep, and risk detection."}]);
+  const [input,setInput]=useState('');const [loading,setLoading]=useState(false);const endRef=useRef(null);
+  useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'});},[msgs,loading]);
+
+  const send = async () => {
+    if(!input.trim()||loading) return;
+    const userMsg = input.trim();
+    setInput('');
+    setMsgs(p=>[...p,{role:'user',content:userMsg}]);
+    setLoading(true);
+    try {
+      const apiMsgs = [...msgs.filter(m=>m.role!=='system'),{role:'user',content:userMsg}].map(m=>({role:m.role,content:m.content}));
+      const text = await callClaude(apiMsgs, SYSTEM_PROMPT + '\n\nKeep responses concise (under 150 words). Use bullet points. Be actionable.');
+      setMsgs(p=>[...p,{role:'assistant',content:text}]);
+    } catch(e) {
+      setMsgs(p=>[...p,{role:'assistant',content:e.message==='NO_KEY'?'Please add your Anthropic API key in Settings (bottom of sidebar) to enable AI chat.':'Sorry, I encountered an error: '+e.message}]);
+    }
+    setLoading(false);
+  };
+
+  if(!open) return <button onClick={()=>setOpen(true)} className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-gradient-to-br from-brand-500 to-violet-500 text-white shadow-lg shadow-brand-500/25 flex items-center justify-center hover:scale-105 transition-transform z-50"><I name="spark" size={20}/></button>;
   return (
-    <div className={`fixed right-5 bottom-5 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col z-50 transition-all ${min?'w-72 h-12':'w-80 h-[460px]'}`}>
-      <div className="flex items-center justify-between px-3 py-2.5 bg-intuit-navy rounded-t-2xl shrink-0"><div className="flex items-center gap-2"><div className="w-6 h-6 rounded-full bg-intuit-blue flex items-center justify-center"><Ico name="bot" size={13}/></div><div><p className="text-white text-xs font-semibold">PM&D Agent</p><p className="text-blue-300 text-[9px]">{persona==='employee'?'Employee Assist':'Manager Assist'}</p></div></div><div className="flex items-center gap-0.5"><button onClick={()=>setMin(!min)} className="p-1 text-blue-300 hover:text-white text-sm">{min?'\u25A1':'\u2014'}</button><button onClick={()=>setOpen(false)} className="p-1 text-blue-300 hover:text-white"><Ico name="x" size={13}/></button></div></div>
-      {!min&&<><div className="flex-1 overflow-y-auto p-3 space-y-2">{msgs.map((m,i)=><div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed whitespace-pre-line ${m.role==='user'?'bg-intuit-blue text-white rounded-br-sm':'bg-gray-100 text-gray-800 rounded-bl-sm'}`}>{m.content}</div></div>)}{typing&&<div className="flex justify-start"><div className="bg-gray-100 px-3 py-2 rounded-xl rounded-bl-sm flex gap-1">{[0,1,2].map(d=><span key={d} className="w-1.5 h-1.5 bg-gray-400 rounded-full typing-dot"/>)}</div></div>}<div ref={endRef}/></div>
-        <div className="px-2 pb-1.5 flex gap-1 flex-wrap">{['My goals','Feedback themes','Promo readiness'].map(q=><button key={q} onClick={()=>setInput(q)} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 hover:bg-gray-200">{q}</button>)}</div>
-        <div className="p-2 border-t border-gray-100 shrink-0"><div className="flex gap-1.5"><input type="text" placeholder="Ask your PM&D Agent..." className="flex-1 px-2.5 py-1.5 rounded-lg border border-gray-300 text-xs focus:outline-none focus:ring-2 focus:ring-intuit-blue/30" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()}/><button onClick={send} className="w-7 h-7 rounded-lg bg-intuit-blue text-white flex items-center justify-center hover:bg-blue-700"><Ico name="send" size={13}/></button></div></div>
+    <div className={`fixed right-6 bottom-6 bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col z-50 transition-all ${min?'w-72 h-12':'w-[360px] h-[500px]'}`}>
+      <div className="flex items-center justify-between px-4 py-3 bg-brand-900 rounded-t-2xl shrink-0">
+        <div className="flex items-center gap-2.5"><div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-violet-500 flex items-center justify-center"><I name="spark" size={14}/></div><div><p className="text-white text-[12px] font-semibold">PM&D Growth Agent</p><p className="text-blue-300/60 text-[10px]">Powered by Claude AI</p></div></div>
+        <div className="flex items-center gap-1"><button onClick={()=>setMin(!min)} className="p-1 text-blue-300/50 hover:text-white text-xs">{min?'□':'—'}</button><button onClick={()=>setOpen(false)} className="p-1 text-blue-300/50 hover:text-white"><I name="x" size={13}/></button></div>
+      </div>
+      {!min&&<>
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {msgs.map((m,i)=><div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-[12px] leading-relaxed whitespace-pre-line ${m.role==='user'?'bg-brand-500 text-white rounded-br-md':'bg-slate-100 text-slate-700 rounded-bl-md'}`}>{m.content}</div></div>)}
+          {loading&&<div className="flex justify-start"><div className="bg-slate-100 px-4 py-3 rounded-2xl rounded-bl-md flex gap-1.5">{[0,1,2].map(d=><span key={d} className="w-1.5 h-1.5 bg-slate-400 rounded-full typing-dot"/>)}</div></div>}
+          <div ref={endRef}/>
+        </div>
+        <div className="px-3 pb-2 flex gap-1.5 flex-wrap">{['How are my goals?','Feedback summary','Promo readiness','Help me prep for 1:1'].map(q=><button key={q} onClick={()=>setInput(q)} className="px-2.5 py-1 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors">{q}</button>)}</div>
+        <div className="p-3 border-t border-slate-100 shrink-0"><div className="flex gap-2"><input type="text" placeholder="Ask anything..." className="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-[12px] bg-slate-50/50 placeholder:text-slate-400" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()}/><button onClick={send} disabled={loading} className="w-8 h-8 rounded-lg bg-brand-500 text-white flex items-center justify-center hover:bg-brand-600 transition-colors disabled:opacity-50"><I name="send" size={14}/></button></div></div>
       </>}
     </div>
   );
@@ -417,17 +680,40 @@ function AgentChat({persona}) {
 
 /* ── APP ── */
 function App() {
-  const [page,setPage]=useState('dashboard');const [persona,setPersona]=useState('employee');
-  const pages={dashboard:<Dashboard persona={persona}/>,goals:<GoalsCoach/>,feedback:<FeedbackCoach/>,checkin:<CheckInPrep/>,skills:<CraftSkills/>,promotion:<Promotion/>,development:<DevPlan/>};
+  const [page,setPage]=useState('dashboard');
+  const [persona,setPersona]=useState('employee');
+  const [showApiSetup,setShowApiSetup]=useState(!localStorage.getItem('anthropic_api_key'));
+  const [showSettings,setShowSettings]=useState(false);
+
+  const handleSaveKey = (key) => {
+    if (key === 'SKIP') {
+      localStorage.setItem('anthropic_api_key', '');
+      setShowApiSetup(false);
+      return;
+    }
+    localStorage.setItem('anthropic_api_key', key);
+    setShowApiSetup(false);
+  };
+
+  const views = {
+    dashboard:<Dashboard persona={persona}/>,
+    goals:<GoalsCoach/>,
+    feedback:<FeedbackCoach/>,
+    checkin:<CheckInPrep/>,
+    skills:<CraftSkills/>,
+    promotion:<Promotion/>,
+    development:<DevPlan/>,
+  };
+
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar page={page} setPage={setPage} persona={persona} setPersona={setPersona}/>
-      <main className="flex-1 overflow-y-auto">{pages[page]}</main>
+    <div className="flex h-screen overflow-hidden">
+      {(showApiSetup || showSettings) && <ApiKeySetup onSave={(k)=>{handleSaveKey(k);setShowSettings(false);}}/>}
+      <Sidebar page={page} setPage={setPage} persona={persona} setPersona={setPersona} onSettings={()=>setShowSettings(true)}/>
+      <main className="flex-1 overflow-y-auto bg-[#F8FAFC]">{views[page]}</main>
       <AgentChat persona={persona}/>
     </div>
   );
 }
-
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
