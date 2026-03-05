@@ -64,7 +64,7 @@ const DEFAULT_ME = {
   wins:[
     'Authored Enterprise Vision Strategy (V2.0) — Unified Intelligent Workforce Platform. 5 strategic pillars, federated build model, Islands of Excellence architecture, FY26-28 roadmap. Presented for EVP/SVP buy-in.',
     'Authored Workforce Transformation through AI-Enabled Superagency — original frameworks: CVI (real-time performance intelligence), Flash Talent Assembly (AI team building), ACE (autonomous strategic decisions), Cognitive Readiness Orchestration. Privacy-first governance. Competitive research with PwC, US Air Force.',
-    'Expanded role to own ALL of HR Product Tech for T4i — largest scope in org.',
+    'Expanded role to own ALL of HR Product Tech for T4i.',
     'Promo Tool (Workday Extend) launched Mar 2 with GenAI work highlights — navigated RAI + security approval.',
     'DNME/Performance Portal launched to ~650 managers — >50% task completion in first week.',
     'ServiceNow HRSD: 177 articles migrated, Dynamic Sensitivity Routing for Now Assist AI.',
@@ -274,8 +274,9 @@ function fmt(t) {
 }
 
 /* ═══ RESPONSE ENGINE ═══ */
-function respond(q, mode, me, team, risks) {
+function respond(q, mode, me, team, risks, contextDocs) {
   const lq = q.toLowerCase();
+  const ctx = contextDocs || '';
 
   if (mode === 'employee') {
     if (lq.includes('goal') || lq.includes('objective') || lq.includes('okr') || lq.includes('deliver')) {
@@ -332,6 +333,15 @@ ${(me.areasToGrow||[]).map(g=>`- ${g}`).join('\n')}`;
       return papers?.length
         ? `## Your Authored Work\n${papers.map(p=>`- ${p}`).join('\n')}`
         : `## Authored Work\nNo strategy papers found in your profile. Tell me about work you've authored and I'll add it.`;
+    }
+    // Context-aware: search uploaded docs for relevant info
+    if (ctx) {
+      const words = lq.split(/\s+/).filter(w=>w.length>3);
+      const ctxLines = ctx.split('\n').filter(l=>l.trim());
+      const matches = ctxLines.filter(l => { const ll=l.toLowerCase(); return words.some(w=>ll.includes(w)); }).slice(0,8);
+      if (matches.length >= 2) {
+        return `## From Your Context\nBased on your uploaded documents:\n${matches.map(m=>`- ${m.trim().slice(0,200)}`).join('\n')}\n\n*Ask me about goals, craft skills, outcomes, or development for deeper analysis.*`;
+      }
     }
     return `Hi ${me.name?.split(' ')[0] || 'there'}. I can help with:
 
@@ -448,10 +458,125 @@ Ask *"Development for Navneet"* for a full craft-skills breakdown.`;
 - **"Development"** — coaching priorities`;
 }
 
+/* ═══ FILE READER UTIL ═══ */
+function readFileAsText(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = () => resolve('');
+    reader.readAsText(file);
+  });
+}
+
+/* ═══ CONTEXT PANEL ═══ */
+function ContextPanel({docs, setDocs, onClose}) {
+  const [paste, setPaste] = useState('');
+  const [dragging, setDragging] = useState(false);
+  const fileRef = useRef(null);
+
+  const addDoc = (title, content) => {
+    if(!content.trim()) return;
+    const next = [...docs, {title: title||`Doc ${docs.length+1}`, content: content.trim(), ts: Date.now()}];
+    setDocs(next);
+    localStorage.setItem('pmd_context_docs', JSON.stringify(next));
+  };
+
+  const removeDoc = (i) => {
+    const next = docs.filter((_,idx) => idx!==i);
+    setDocs(next);
+    localStorage.setItem('pmd_context_docs', JSON.stringify(next));
+  };
+
+  const handleFiles = async (files) => {
+    for (const f of files) {
+      if (f.size > 500000) continue; // 500KB limit per file
+      const text = await readFileAsText(f);
+      if (text.trim()) addDoc(f.name, text);
+    }
+  };
+
+  const handleDrop = (e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="glass rounded-2xl p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-base font-semibold text-white">Context Documents</h2>
+            <p className="text-[11px] text-slate-400">Upload .txt/.csv/.md files or paste text. Used to ground responses.</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          </button>
+        </div>
+
+        {/* Drop zone */}
+        <div onDragOver={e=>{e.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)} onDrop={handleDrop}
+          onClick={()=>fileRef.current?.click()}
+          className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition mb-3 ${dragging?'border-brand-400 bg-brand-400/10':'border-slate-700 hover:border-slate-500'}`}>
+          <input ref={fileRef} type="file" multiple accept=".txt,.md,.csv,.json,.log,.tsv" className="hidden" onChange={e=>handleFiles(e.target.files)}/>
+          <svg className="mx-auto mb-1.5 text-slate-500" width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <p className="text-xs text-slate-400">Drop files here or click to browse</p>
+          <p className="text-[10px] text-slate-600 mt-0.5">.txt, .md, .csv, .json — 500KB max per file</p>
+        </div>
+
+        {/* Paste area */}
+        <div className="mb-3">
+          <label className="text-[11px] text-slate-400 mb-1 block">Or paste text directly</label>
+          <textarea value={paste} onChange={e=>setPaste(e.target.value)} rows={4}
+            placeholder={"Paste project updates, strategy docs, weekly updates, team context...\n\nThis text will be used to personalize your growth recommendations."}
+            className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none resize-none"/>
+          {paste.trim() && (
+            <button onClick={()=>{addDoc('Pasted context', paste); setPaste('');}}
+              className="mt-1.5 px-3 py-1.5 rounded-lg bg-brand-400 text-white text-xs font-medium hover:bg-brand-500 transition">
+              Add context
+            </button>
+          )}
+        </div>
+
+        {/* Saved docs */}
+        {docs.length > 0 && (
+          <div>
+            <label className="text-[11px] text-slate-400 mb-1.5 block">Saved context ({docs.length})</label>
+            <div className="space-y-1.5">
+              {docs.map((doc,i) => (
+                <div key={i} className="flex items-start gap-2 bg-slate-800/50 rounded-lg p-2.5">
+                  <svg className="text-brand-300 mt-0.5 flex-shrink-0" width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-white truncate">{doc.title}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">{doc.content.length.toLocaleString()} chars</p>
+                  </div>
+                  <button onClick={()=>removeDoc(i)} className="text-slate-500 hover:text-rose-400 transition flex-shrink-0" title="Remove">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <p className="text-[10px] text-slate-600 mt-3 text-center">All data stays in your browser (localStorage)</p>
+      </div>
+    </div>
+  );
+}
+
 /* ═══ SETUP FLOW ═══ */
 function Setup({onDone}) {
   const [step, setStep] = useState(0);
-  const [d, setD] = useState({name:'',role:'',org:'',target:'',goals:'',wins:'',strengths:'',gaps:''});
+  const [d, setD] = useState({name:'',role:'',org:'',target:'',goals:'',wins:'',strengths:'',gaps:'',context:''});
+  const fileRef = useRef(null);
+  const [files, setFiles] = useState([]);
+
+  const handleFiles = async (fileList) => {
+    const newFiles = [];
+    for (const f of fileList) {
+      if (f.size > 500000) continue;
+      const text = await readFileAsText(f);
+      if (text.trim()) newFiles.push({title:f.name, content:text.trim()});
+    }
+    setFiles(prev=>[...prev, ...newFiles]);
+  };
 
   if (step === 0) return (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -481,7 +606,7 @@ function Setup({onDone}) {
       <div className="max-w-lg w-full fade-up">
         <div className="glass rounded-2xl p-6">
           <div className="flex gap-1.5 mb-5">
-            {[1,2,3].map(s=><div key={s} className={`h-1 flex-1 rounded-full ${step>=s?'bg-brand-400':'bg-slate-700'}`}/>)}
+            {[1,2,3,4].map(s=><div key={s} className={`h-1 flex-1 rounded-full ${step>=s?'bg-brand-400':'bg-slate-700'}`}/>)}
           </div>
 
           {step===1 && (<>
@@ -531,6 +656,48 @@ function Setup({onDone}) {
             </div>
             <div className="flex gap-2 mt-4">
               <button onClick={()=>setStep(2)} className="flex-1 py-2.5 rounded-xl border border-slate-600 text-slate-300 text-sm hover:border-slate-500 transition">Back</button>
+              <button onClick={()=>setStep(4)} className="flex-1 py-2.5 rounded-xl bg-brand-400 text-white text-sm font-medium hover:bg-brand-500 transition">Next</button>
+            </div>
+          </>)}
+
+          {step===4 && (<>
+            <h2 className="text-base font-semibold text-white mb-0.5">Add context</h2>
+            <p className="text-xs text-slate-400 mb-4">Upload files or paste text — strategy docs, weekly updates, team context, project details</p>
+
+            {/* File upload */}
+            <div onClick={()=>fileRef.current?.click()}
+              className="border-2 border-dashed border-slate-700 hover:border-slate-500 rounded-xl p-3 text-center cursor-pointer transition mb-3">
+              <input ref={fileRef} type="file" multiple accept=".txt,.md,.csv,.json,.log,.tsv" className="hidden" onChange={e=>handleFiles(e.target.files)}/>
+              <svg className="mx-auto mb-1 text-slate-500" width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <p className="text-[11px] text-slate-400">Drop files or click to upload</p>
+              <p className="text-[10px] text-slate-600">.txt, .md, .csv, .json — 500KB max</p>
+            </div>
+
+            {files.length > 0 && (
+              <div className="space-y-1 mb-3">
+                {files.map((f,i) => (
+                  <div key={i} className="flex items-center gap-2 bg-slate-800/50 rounded-lg px-2.5 py-1.5">
+                    <svg className="text-brand-300 flex-shrink-0" width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2"/></svg>
+                    <span className="text-[11px] text-white flex-1 truncate">{f.title}</span>
+                    <span className="text-[10px] text-slate-500">{f.content.length.toLocaleString()} chars</span>
+                    <button onClick={()=>setFiles(prev=>prev.filter((_,idx)=>idx!==i))} className="text-slate-500 hover:text-rose-400">
+                      <svg width="10" height="10" fill="none" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Paste area */}
+            <div>
+              <label className="text-[11px] text-slate-400 mb-1 block">Or paste text</label>
+              <textarea value={d.context} onChange={e=>setD({...d,context:e.target.value})} rows={4}
+                placeholder={"Paste project updates, Slack digests, strategy docs, perf review notes, org context...\n\nThis grounds the agent's recommendations in your actual work."}
+                className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm focus:border-brand-400 outline-none resize-none"/>
+            </div>
+
+            <div className="flex gap-2 mt-4">
+              <button onClick={()=>setStep(3)} className="flex-1 py-2.5 rounded-xl border border-slate-600 text-slate-300 text-sm hover:border-slate-500 transition">Back</button>
               <button onClick={()=>{
                 const parse = s => s.split('\n').map(l=>l.trim()).filter(Boolean);
                 const profile = {
@@ -539,10 +706,132 @@ function Setup({onDone}) {
                   craftPillars:['Product Strategy','Product Execution','Technology Fluency','Org Effectiveness'],
                 };
                 localStorage.setItem('pmd_profile', JSON.stringify(profile));
+                // Save context docs
+                const contextDocs = [...files];
+                if (d.context.trim()) contextDocs.push({title:'Pasted context', content:d.context.trim(), ts:Date.now()});
+                if (contextDocs.length) localStorage.setItem('pmd_context_docs', JSON.stringify(contextDocs));
                 onDone(profile);
               }} className="flex-1 py-2.5 rounded-xl bg-brand-400 text-white text-sm font-medium hover:bg-brand-500 transition">Launch</button>
             </div>
+            <p className="text-[10px] text-slate-500 text-center mt-2">Optional — you can skip and add context later</p>
           </>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══ PROMO TRACKER ═══ */
+function PromoTracker({me, team}) {
+  const isIshita = me?.name === DEFAULT_ME.name;
+  if (!isIshita) return (
+    <div className="fade-up pt-6 px-2">
+      <div className="glass rounded-2xl p-6 text-center">
+        <p className="text-sm text-slate-300">Promo tracker requires your manager to configure milestones for your role.</p>
+        <p className="text-xs text-slate-500 mt-2">Add your goals, outcomes, and context to get started.</p>
+      </div>
+    </div>
+  );
+
+  const overall = 95;
+  const milestones = [
+    {label:'Product Strategy', pct:97, color:'#365EDC', items:[
+      {t:'Enterprise Vision V2.0 authored & presented',done:true},
+      {t:'Workforce Transformation / Superagency paper authored',done:true},
+      {t:'5 strategic pillars defined, FY26-28 roadmap',done:true},
+      {t:'Cross-BU strategy adoption — present beyond T4i',done:false},
+    ]},
+    {label:'Product Execution', pct:96, color:'#10B981', items:[
+      {t:'7+ concurrent programs (ServiceNow, CK, Avature, Workday, Learning, Expert Hiring)',done:true},
+      {t:'Promo Tool launched Mar 2 with GenAI',done:true},
+      {t:'DNME Portal: >50% task completion in first week',done:true},
+      {t:'CK Avature Mar 30 cutover confirmed',done:true},
+      {t:'Quantified $ impact narratives across all pillars',done:false},
+    ]},
+    {label:'Technology Fluency', pct:92, color:'#F59E0B', items:[
+      {t:'GenAI integration — Promo Tool, RAI + security approval',done:true},
+      {t:'ServiceNow Now Assist Dynamic Sensitivity Routing',done:true},
+      {t:'AI-Enabled Superagency frameworks (CVI, ACE, Flash Talent)',done:true},
+      {t:'Present AI patterns at company-wide tech forum',done:false},
+      {t:'Publish AI POV beyond T4i',done:false},
+    ]},
+    {label:'Org Effectiveness', pct:93, color:'#FB7185', items:[
+      {t:'7 PMs + 2 supporting across 5 domains',done:true},
+      {t:'Expanded to own ALL HR Product Tech for T4i',done:true},
+      {t:'Cross-functional: ServiceNow, Workday, Avature, Learning, Expert Hiring',done:true},
+      {t:'Visible cross-BU influence outside T4i',done:false},
+    ]},
+  ];
+
+  return (
+    <div className="fade-up pt-4 px-1 space-y-4 pb-8">
+      {/* Overall ring */}
+      <div className="glass rounded-2xl p-5">
+        <div className="flex items-center gap-5">
+          <div className="relative flex-shrink-0">
+            <svg width="90" height="90" viewBox="0 0 90 90">
+              <circle cx="45" cy="45" r="38" fill="none" stroke="#1E293B" strokeWidth="7"/>
+              <circle cx="45" cy="45" r="38" fill="none" stroke="#365EDC" strokeWidth="7"
+                strokeDasharray={`${2*Math.PI*38*overall/100} ${2*Math.PI*38*(1-overall/100)}`}
+                strokeDashoffset={2*Math.PI*38*0.25}
+                strokeLinecap="round" className="transition-all duration-1000"/>
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xl font-bold text-white">{overall}%</span>
+            </div>
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-white">Promo Readiness</h2>
+            <p className="text-xs text-slate-400 mt-0.5">{me.role} → {me.target}</p>
+            <p className="text-[11px] text-mint-400 mt-1.5 font-medium">Almost there — close remaining gaps to lock it in</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Pillar cards */}
+      {milestones.map((m,i) => {
+        const done = m.items.filter(x=>x.done).length;
+        const total = m.items.length;
+        return (
+          <div key={i} className="glass rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{backgroundColor:m.color}}/>
+                <span className="text-sm font-semibold text-white">{m.label}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-slate-400">{done}/{total}</span>
+                <span className="text-xs font-bold" style={{color:m.color}}>{m.pct}%</span>
+              </div>
+            </div>
+            {/* Progress bar */}
+            <div className="h-1.5 rounded-full bg-slate-800 mb-3">
+              <div className="h-full rounded-full transition-all duration-700" style={{width:`${m.pct}%`, backgroundColor:m.color}}/>
+            </div>
+            {/* Items */}
+            <div className="space-y-1.5">
+              {m.items.map((item,j) => (
+                <div key={j} className="flex items-start gap-2">
+                  {item.done
+                    ? <svg className="flex-shrink-0 mt-0.5" width="14" height="14" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill={m.color} opacity="0.2"/><path d="M9 12l2 2 4-4" stroke={m.color} strokeWidth="2" strokeLinecap="round"/></svg>
+                    : <svg className="flex-shrink-0 mt-0.5 text-slate-600" width="14" height="14" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5"/></svg>
+                  }
+                  <span className={`text-[12px] leading-relaxed ${item.done?'text-slate-300':'text-slate-500'}`}>{item.t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* What's left */}
+      <div className="glass rounded-xl p-4 border-l-2 border-amber-400">
+        <h3 className="text-sm font-semibold text-white mb-2">To reach 100%</h3>
+        <div className="space-y-1.5 text-[12px] text-slate-300">
+          <p>1. <strong className="text-white">Cross-BU visibility</strong> — present Enterprise Vision or Superagency frameworks to audiences outside T4i</p>
+          <p>2. <strong className="text-white">Quantified impact</strong> — build $ and efficiency metrics across all pillars (ServiceNow ROI, CK cost avoidance, TA consolidation savings)</p>
+          <p>3. <strong className="text-white">AI thought leadership</strong> — present at company-wide tech forum, publish AI POV externally</p>
+          <p>4. <strong className="text-white">Organizational influence</strong> — shape a roadmap or strategy decision outside your org</p>
         </div>
       </div>
     </div>
@@ -558,10 +847,15 @@ function App() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [welcome, setWelcome] = useState(true);
+  const [showCtx, setShowCtx] = useState(false);
+  const [ctxDocs, setCtxDocs] = useState([]);
   const end = useRef(null);
   const inp = useRef(null);
 
-  useEffect(()=>{ const s=localStorage.getItem('pmd_profile'); if(s){setMe(JSON.parse(s));setReady(true);} },[]);
+  useEffect(()=>{
+    const s=localStorage.getItem('pmd_profile'); if(s){setMe(JSON.parse(s));setReady(true);}
+    try { const c=localStorage.getItem('pmd_context_docs'); if(c) setCtxDocs(JSON.parse(c)); } catch(e){}
+  },[]);
   useEffect(()=>{ end.current?.scrollIntoView({behavior:'smooth'}); },[msgs,loading]);
 
   const team = me?.name===DEFAULT_ME.name ? DEFAULT_TEAM : [];
@@ -574,12 +868,13 @@ function App() {
     setInput(''); setWelcome(false);
     setMsgs(p=>[...p,{r:'u',c:msg}]); setLoading(true);
     await new Promise(r=>setTimeout(r, 250+Math.random()*400));
-    setMsgs(p=>[...p,{r:'a',c:respond(msg, mode, me||DEFAULT_ME, team, risks)}]);
+    const ctx = ctxDocs.map(d=>d.content).join('\n\n');
+    setMsgs(p=>[...p,{r:'a',c:respond(msg, mode, me||DEFAULT_ME, team, risks, ctx)}]);
     setLoading(false);
     setTimeout(()=>inp.current?.focus(),100);
   };
 
-  const reset = () => { localStorage.removeItem('pmd_profile'); setMe(null); setReady(false); setMsgs([]); setWelcome(true); };
+  const reset = () => { localStorage.removeItem('pmd_profile'); localStorage.removeItem('pmd_context_docs'); setMe(null); setReady(false); setMsgs([]); setWelcome(true); setCtxDocs([]); };
 
   if (!ready) return <Setup onDone={p=>{ if(p)setMe(p); else setMe(DEFAULT_ME); setReady(true); }} />;
 
@@ -603,8 +898,13 @@ function App() {
           <div className="flex items-center gap-2.5">
             <div className="flex bg-slate-800/60 rounded-full p-0.5">
               <button onClick={()=>go('employee')} className={`px-3 py-1 rounded-full text-xs font-medium transition ${mode==='employee'?'bg-brand-400 text-white':'text-slate-400 hover:text-white'}`}>My Growth</button>
+              <button onClick={()=>go('promo')} className={`px-3 py-1 rounded-full text-xs font-medium transition ${mode==='promo'?'bg-brand-400 text-white':'text-slate-400 hover:text-white'}`}>Promo</button>
               {team.length>0 && <button onClick={()=>go('manager')} className={`px-3 py-1 rounded-full text-xs font-medium transition ${mode==='manager'?'bg-brand-400 text-white':'text-slate-400 hover:text-white'}`}>My Team</button>}
             </div>
+            <button onClick={()=>setShowCtx(true)} className="text-slate-500 hover:text-slate-300 relative" title="Add context">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2"/><path d="M14 2v6h6M12 18v-6M9 15h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+              {ctxDocs.length > 0 && <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-brand-400 text-[7px] text-white flex items-center justify-center font-bold">{ctxDocs.length}</span>}
+            </button>
             <button onClick={reset} className="text-slate-500 hover:text-slate-300" title="Switch profile">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </button>
@@ -613,7 +913,8 @@ function App() {
       </header>
 
       <div className="flex-1 max-w-4xl w-full mx-auto px-4 pb-36">
-        {welcome && (
+        {mode==='promo' && <PromoTracker me={me||DEFAULT_ME} team={team}/>}
+        {mode!=='promo' && welcome && (
           <div className="fade-up pt-6 pb-3">
             <div className="text-center mb-4">
               <h2 className="text-lg font-semibold text-white">
@@ -651,7 +952,7 @@ function App() {
           </div>
         )}
 
-        {msgs.map((m,i) => (
+        {mode!=='promo' && msgs.map((m,i) => (
           <div key={i} className={`msg-enter ${m.r==='u'?'flex justify-end':''} mt-3`}>
             {m.r==='u' ? (
               <div className="max-w-[75%] bg-brand-400 rounded-2xl rounded-br-sm px-4 py-2"><p className="text-sm text-white">{m.c}</p></div>
@@ -661,13 +962,13 @@ function App() {
           </div>
         ))}
 
-        {loading && <div className="mt-3 msg-enter"><div className="glass rounded-2xl px-4 py-3 inline-flex gap-1.5">
+        {mode!=='promo' && loading && <div className="mt-3 msg-enter"><div className="glass rounded-2xl px-4 py-3 inline-flex gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-brand-300 typing-dot"/><div className="w-1.5 h-1.5 rounded-full bg-brand-300 typing-dot"/><div className="w-1.5 h-1.5 rounded-full bg-brand-300 typing-dot"/>
         </div></div>}
         <div ref={end}/>
       </div>
 
-      <div className="fixed bottom-0 inset-x-0 bg-gradient-to-t from-brand-900 via-brand-900/95 to-transparent pt-5 pb-3 px-4">
+      {mode!=='promo' && <div className="fixed bottom-0 inset-x-0 bg-gradient-to-t from-brand-900 via-brand-900/95 to-transparent pt-5 pb-3 px-4">
         <div className="max-w-4xl mx-auto">
           {!welcome && (
             <div className="flex gap-1.5 mb-2 overflow-x-auto">
@@ -688,7 +989,8 @@ function App() {
             </button>
           </div>
         </div>
-      </div>
+      </div>}
+      {showCtx && <ContextPanel docs={ctxDocs} setDocs={setCtxDocs} onClose={()=>setShowCtx(false)} />}
     </div>
   );
 }
