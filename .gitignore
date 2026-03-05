@@ -14,8 +14,8 @@ out/
 .env.development.local
 
 # Prisma
-prisma/*.db
-prisma/*.db-journal
+*.db
+*.db-journal
 
 # Vercel
 .vercel
