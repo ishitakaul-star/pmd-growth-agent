@@ -48,7 +48,13 @@ export async function getUserProfileFromDB(userId: string): Promise<{
       role: dbProfile.jobTitle || "",
       org: dbProfile.org || "",
       target: dbProfile.targetLevel || "",
-      goals: dbProfile.goals.map((g) => g.title),
+      goals: dbProfile.goals.map((g) => {
+        // Enrich Betterworks-sourced goals with progress info
+        if (g.bwId && g.progress > 0) {
+          return `${g.title} (${g.progress}% complete)`;
+        }
+        return g.title;
+      }),
       wins: dbProfile.wins.map((w) => w.description),
       strengths: parseJson<string[]>(dbProfile.strengths, []),
       areasToGrow: parseJson<string[]>(dbProfile.areasToGrow, []),

@@ -430,6 +430,7 @@ ${(pm.projects || [])
 ### Risks (${(pm.risks || []).length})
 ${(pm.risks || []).map((r) => `- ${r}`).join("\n")}
 ${pm.dev ? `\n### Development Focus\n- **Strategy**: ${pm.dev.strategy.slice(0, 120)}...\n- **Execution**: ${pm.dev.execution.slice(0, 120)}...` : ""}
+${pm.note ? `\n### Latest Context\n${pm.note.split("\n---\n")[0].trim()}` : ""}
 
 ---
 Try *"Feedback for ${pm.name.split(" ")[0]}"* or *"Development for ${pm.name.split(" ")[0]}"*`;
